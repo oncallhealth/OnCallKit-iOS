@@ -36,7 +36,7 @@ let package = Package(
                 "Starscream",
                 "MessageKit"],
             resources: [
-                .process("MobileRTCResources.bundle")]),
+                .copy("MobileRTCResources.bundle")]),
         .binaryTarget(
             name: "MobileRTC",
             path: "MobileRTC.xcframework"
