@@ -34,9 +34,7 @@ let package = Package(
                 "PromiseKit",
                 "KeychainSwift",
                 "Starscream",
-                "MessageKit"],
-            resources: [
-                .copy("MobileRTCResources.bundle")]),
+                "MessageKit"]),
         .binaryTarget(
             name: "MobileRTC",
             path: "MobileRTC.xcframework"
