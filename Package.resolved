@@ -1,0 +1,106 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Alamofire",
+        "repositoryURL": "https://github.com/Alamofire/Alamofire",
+        "state": {
+          "branch": null,
+          "revision": "4d19ad82f80cc71ff829b941ded114c56f4f604c",
+          "version": "5.4.2"
+        }
+      },
+      {
+        "package": "Bugsnag",
+        "repositoryURL": "https://github.com/bugsnag/bugsnag-cocoa",
+        "state": {
+          "branch": null,
+          "revision": "04e6ab85d3aa9dd7495d8b1bfd10bb6241a13dea",
+          "version": "6.8.3"
+        }
+      },
+      {
+        "package": "InputBarAccessoryView",
+        "repositoryURL": "https://github.com/nathantannar4/InputBarAccessoryView",
+        "state": {
+          "branch": null,
+          "revision": "f5e21ad31f7e747ae08eae91b6fc6d2348bb750d",
+          "version": "5.3.1"
+        }
+      },
+      {
+        "package": "KeychainSwift",
+        "repositoryURL": "https://github.com/evgenyneu/keychain-swift",
+        "state": {
+          "branch": null,
+          "revision": "96fb84f45a96630e7583903bd7e08cf095c7a7ef",
+          "version": "19.0.0"
+        }
+      },
+      {
+        "package": "MessageKit",
+        "repositoryURL": "https://github.com/MessageKit/MessageKit",
+        "state": {
+          "branch": null,
+          "revision": "bdb07821037d7760041c979d7986774a0edb06ef",
+          "version": "3.6.0"
+        }
+      },
+      {
+        "package": "PanModal",
+        "repositoryURL": "https://github.com/slackhq/PanModal",
+        "state": {
+          "branch": null,
+          "revision": "b012aecb6b67a8e46369227f893c12544846613f",
+          "version": "1.2.7"
+        }
+      },
+      {
+        "package": "PromiseKit",
+        "repositoryURL": "https://github.com/mxcl/PromiseKit",
+        "state": {
+          "branch": null,
+          "revision": "f6b15b7626a4399864ffa1d5ec2ed9cf0cea5556",
+          "version": "6.13.2"
+        }
+      },
+      {
+        "package": "QuickLayout",
+        "repositoryURL": "https://github.com/huri000/QuickLayout",
+        "state": {
+          "branch": null,
+          "revision": "6be62decbe508d8fc8f9dbafc349d05bab03c38b",
+          "version": "3.0.1"
+        }
+      },
+      {
+        "package": "SnapKit",
+        "repositoryURL": "https://github.com/SnapKit/SnapKit",
+        "state": {
+          "branch": null,
+          "revision": "d458564516e5676af9c70b4f4b2a9178294f1bc6",
+          "version": "5.0.1"
+        }
+      },
+      {
+        "package": "Starscream",
+        "repositoryURL": "https://github.com/daltoniam/Starscream",
+        "state": {
+          "branch": null,
+          "revision": "df8d82047f6654d8e4b655d1b1525c64e1059d21",
+          "version": "4.0.4"
+        }
+      },
+      {
+        "package": "SwiftEntryKit",
+        "repositoryURL": "https://github.com/huri000/SwiftEntryKit",
+        "state": {
+          "branch": null,
+          "revision": "c2d42574e4fe4e1f9719843f35add7922942a16b",
+          "version": "1.2.7"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
