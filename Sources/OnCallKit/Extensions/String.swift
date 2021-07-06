@@ -10,7 +10,7 @@ extension String {
     }
     
     func icon() -> UIImage? {
-        return UIImage(named: self)
+        return UIImage(named: self, in: Bundle.module, compatibleWith: nil)
     }
     
     func iconTemplate() -> UIImage? {
