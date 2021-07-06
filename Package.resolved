@@ -1,0 +1,106 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Alamofire",
+        "repositoryURL": "https://github.com/Alamofire/Alamofire",
+        "state": {
+          "branch": null,
+          "revision": "4d19ad82f80cc71ff829b941ded114c56f4f604c",
+          "version": "5.4.2"
+        }
+      },
+      {
+        "package": "EasyNotificationBadge",
+        "repositoryURL": "https://github.com/Minitour/EasyNotificationBadge",
+        "state": {
+          "branch": null,
+          "revision": "2774998af193a396b1842c0727fe52c2bd217ae2",
+          "version": "1.2.5"
+        }
+      },
+      {
+        "package": "InputBarAccessoryView",
+        "repositoryURL": "https://github.com/nathantannar4/InputBarAccessoryView",
+        "state": {
+          "branch": null,
+          "revision": "f5e21ad31f7e747ae08eae91b6fc6d2348bb750d",
+          "version": "5.3.1"
+        }
+      },
+      {
+        "package": "Material Components iOS",
+        "repositoryURL": "https://github.com/DomenicBianchi01/material-components-ios",
+        "state": {
+          "branch": null,
+          "revision": "0814da3ee382e12f470138085cf9a7283a04f63c",
+          "version": "110.0.0"
+        }
+      },
+      {
+        "package": "MDFInternationalization",
+        "repositoryURL": "https://github.com/grupopulpo/material-internationalization-ios",
+        "state": {
+          "branch": null,
+          "revision": "92fa95fcb868b1599f6c8fc03ef30c21b47c66e7",
+          "version": "2.0.97"
+        }
+      },
+      {
+        "package": "MDFTextAccessibility",
+        "repositoryURL": "https://github.com/grupopulpo/material-text-accessibility-ios",
+        "state": {
+          "branch": null,
+          "revision": "1a1aeb5d6f13e41d1f6a18f32a2131df23f7c198",
+          "version": "2.0.2"
+        }
+      },
+      {
+        "package": "MessageKit",
+        "repositoryURL": "https://github.com/MessageKit/MessageKit",
+        "state": {
+          "branch": null,
+          "revision": "bdb07821037d7760041c979d7986774a0edb06ef",
+          "version": "3.6.0"
+        }
+      },
+      {
+        "package": "PanModal",
+        "repositoryURL": "https://github.com/slackhq/PanModal",
+        "state": {
+          "branch": null,
+          "revision": "b012aecb6b67a8e46369227f893c12544846613f",
+          "version": "1.2.7"
+        }
+      },
+      {
+        "package": "PromiseKit",
+        "repositoryURL": "https://github.com/mxcl/PromiseKit",
+        "state": {
+          "branch": null,
+          "revision": "d2f7ba14bcdc45e18f4f60ad9df883fb9055f081",
+          "version": "6.15.3"
+        }
+      },
+      {
+        "package": "SnapKit",
+        "repositoryURL": "https://github.com/SnapKit/SnapKit",
+        "state": {
+          "branch": null,
+          "revision": "d458564516e5676af9c70b4f4b2a9178294f1bc6",
+          "version": "5.0.1"
+        }
+      },
+      {
+        "package": "Starscream",
+        "repositoryURL": "https://github.com/daltoniam/Starscream",
+        "state": {
+          "branch": null,
+          "revision": "df8d82047f6654d8e4b655d1b1525c64e1059d21",
+          "version": "4.0.4"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
