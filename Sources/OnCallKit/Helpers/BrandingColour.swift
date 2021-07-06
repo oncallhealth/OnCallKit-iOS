@@ -10,6 +10,6 @@ import Foundation
 // MARK: BrandingColour
 
 public struct BrandingColour {
-    public let light: String
-    public let dark: String
+    let light: String
+    let dark: String
 }
