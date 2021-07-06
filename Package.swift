@@ -35,7 +35,8 @@ let package = Package(
                 .product(name: "MaterialComponents", package: "Material Components iOS")
             ],
             resources: [
-                .copy("MobileRTCResources.bundle")]),
+                .copy("MobileRTCResources.bundle"),
+                .process("Assets.xcassets")]),
         .binaryTarget(
             name: "MobileRTC",
             path: "MobileRTC.xcframework"

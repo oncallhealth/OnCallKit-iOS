@@ -9,10 +9,6 @@ extension String {
         return String.localizedStringWithFormat(localized(), value)
     }
     
-    private func test() {
-        UIImage(named: self, in: .module, compatibleWith: nil)
-    }
-    
     func icon() -> UIImage? {
         return UIImage(named: self, in: .module, compatibleWith: nil)
     }
