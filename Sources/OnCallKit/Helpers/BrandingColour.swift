@@ -13,7 +13,7 @@ public struct BrandingColour {
     
     // MARK: Lifecycle
     
-    init(light: String, dark: String) {
+    public init(light: String, dark: String) {
         self.light = light
         self.dark = dark
     }
