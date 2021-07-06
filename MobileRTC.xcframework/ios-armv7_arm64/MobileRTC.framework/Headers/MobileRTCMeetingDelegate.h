@@ -1002,6 +1002,12 @@
 */
 - (void)onHelpRequestReceived:(NSString *_Nullable)strUserID;
 
+/*!
+@brief admin received error when start BO failed
+@param errType the error type defail of the failure.
+*/
+- (void)onStartBOError:(MobileRTCBOControllerError)errType;
+
 @end
 
 #pragma mark - MobileRTCBOServiceDelegate
@@ -1022,5 +1028,16 @@
 @brief host left current bo meeting.
 */
 - (void)onHostLeaveThisBOMeeting;
+
+@end
+
+#pragma mark - MobileRTCBOServiceDelegate
+@protocol MobileRTCBOCreatorDelegate <MobileRTCMeetingServiceDelegate>
+
+/*!
+@brief creator received BO identifier when create BO success
+@param BOID the identifier of the created bo.
+*/
+- (void)onBOCreateSuccess:(NSString *_Nullable)BOID;
 
 @end

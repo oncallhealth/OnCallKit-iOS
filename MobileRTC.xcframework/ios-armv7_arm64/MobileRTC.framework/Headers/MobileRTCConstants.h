@@ -756,6 +756,20 @@ typedef NS_ENUM(NSUInteger, MobileRTCBOHelpReply) {
 };
 
 /*!
+ @brief Error type of Starting BO Failed
+ */
+typedef NS_ENUM(NSUInteger, MobileRTCBOControllerError) {
+    MobileRTCBOControllerError_NULL_POINTER = 0,
+    MobileRTCBOControllerError_WRONG_CURRENT_STATUS,
+    MobileRTCBOControllerError_TOKEN_NOT_READY,
+    MobileRTCBOControllerError_NO_PRIVILEGE,
+    MobileRTCBOControllerError_BO_LIST_IS_UPLOADING,
+    MobileRTCBOControllerError_UPLOAD_FAIL,
+    MobileRTCBOControllerError_NO_ONE_HAS_BEEN_ASSIGNED,
+    MobileRTCBOControllerError_UNKNOWN = 100
+};
+
+/*!
 @brief Direct sharing status.
 */
 typedef NS_ENUM(NSUInteger, MobileRTCDirectShareStatus) {

@@ -34,7 +34,7 @@
 		</data>
 		<key>Headers/MobileRTCConstants.h</key>
 		<data>
-		2T+L5yD5Zg0Y+ygz80MvO8Hh4Fo=
+		I/5L+It5Ooyj9v9NDMqbPsQLtjo=
 		</data>
 		<key>Headers/MobileRTCDialinCountry.h</key>
 		<data>
@@ -62,7 +62,7 @@
 		</data>
 		<key>Headers/MobileRTCMeetingDelegate.h</key>
 		<data>
-		YF7CKSdi8OkZ9AcceG0rJFxfX9I=
+		Dx6rotPL5KMIPc/wlY7bhkAHQwc=
 		</data>
 		<key>Headers/MobileRTCMeetingService+AppShare.h</key>
 		<data>
@@ -178,7 +178,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		hIlr9Z0kHtOovzA/BTkH4xW/3yQ=
+		NGCsu/89am4xo/szOoLp7lMzdJ8=
 		</data>
 		<key>Modules/module.modulemap</key>
 		<data>
@@ -388,11 +388,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			2T+L5yD5Zg0Y+ygz80MvO8Hh4Fo=
+			I/5L+It5Ooyj9v9NDMqbPsQLtjo=
 			</data>
 			<key>hash2</key>
 			<data>
-			AE9kxyBpGxBotcNwLLJe83MyDPvbDBEDI6d+0iV5L7Q=
+			CnfQXYSM5elZEzXakrypEt+Bir1w9n25WnZ71961HpM=
 			</data>
 		</dict>
 		<key>Headers/MobileRTCDialinCountry.h</key>
@@ -465,11 +465,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			YF7CKSdi8OkZ9AcceG0rJFxfX9I=
+			Dx6rotPL5KMIPc/wlY7bhkAHQwc=
 			</data>
 			<key>hash2</key>
 			<data>
-			x2foOLdHu0k8ppuFCS25FVyy5jsNbEStohzOfYGvI+g=
+			3llOjlhG3ONgV5OHIfI9FxvelXzOaufLBkcMxCe/8JA=
 			</data>
 		</dict>
 		<key>Headers/MobileRTCMeetingService+AppShare.h</key>
