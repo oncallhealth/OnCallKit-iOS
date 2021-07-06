@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "OnCallKit",
+    defaultLocalization: "en",
     platforms: [.iOS(.v12)],
     products: [
         .library(
