@@ -33,7 +33,7 @@ let package = Package(
                 "MessageKit",
                 "EasyNotificationBadge",
                 .product(name: "MaterialComponents", package: "Material Components iOS")
-            ]
+            ]),
         .binaryTarget(
             name: "MobileRTC",
             path: "MobileRTC.xcframework"
