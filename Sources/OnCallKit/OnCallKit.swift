@@ -54,13 +54,13 @@ public struct OnCallKit {
     }
     
     public static func startVideoAppointment(
-        for appointment: AppointmentModel,
+        for appointmentId: Int,
         viewController: UIViewController & ZoomManagerDelegate)
     {
         guard SessionManager.shared.user != nil else {
             return
         }
             
-        VideoCallHelper().joinCall(for: appointment, callingViewController: viewController)
+        VideoCallHelper().joinCall(for: appointmentId, callingViewController: viewController)
     }
 }

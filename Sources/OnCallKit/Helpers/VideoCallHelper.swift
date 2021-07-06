@@ -24,16 +24,16 @@ class VideoCallHelper: NSObject {
     var joinedAppointment: AppointmentModel?
 
     func joinCall(
-        for appointment: AppointmentModel,
+        for appointmentId: Int,
         callingViewController viewController: UIViewController & ZoomManagerDelegate)
     {
         let loadingIndicator = viewController.presentLoadingIndicator()
         
-        SessionManager.shared.apiManager.joinVideoAppointment(appointment.id) { updatedAppointment in
+        SessionManager.shared.apiManager.joinVideoAppointment(appointmentId) { updatedAppointment in
             SessionManager.shared.fetchCurrentUser { _ in
                 loadingIndicator.dismiss {
                     guard let updatedAppointment = updatedAppointment else {
-                        self.delegate?.didEncounterError(errorMessage: "Unable to create room for appointment: \(appointment.id)")
+                        self.delegate?.didEncounterError(errorMessage: "Unable to create room for appointment: \(appointmentId)")
                         return
                     }
                     
@@ -41,7 +41,7 @@ class VideoCallHelper: NSObject {
                         return
                     }
                     
-                    switch appointment.division.videoProvider {
+                    switch updatedAppointment.division.videoProvider {
                     case .zoom, .zoompool:
                         if updatedAppointment.zoomUrl == nil {
                             self.delegate?.didEncounterError(errorMessage: "Appointment \(updatedAppointment.id) has its division set to either zoom or zoom pool but does not have a zoom url.")
