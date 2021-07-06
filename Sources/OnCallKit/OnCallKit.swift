@@ -64,7 +64,7 @@ public struct OnCallKit {
         videoCallHelper.joinCall(for: appointmentId, callingViewController: viewController)
     }
     
-    public static func getMessageAppointmentViewController(for threadId: Int, viewController: UIViewController) {
+    public static func startMessageAppointment(for threadId: Int, viewController: UIViewController) {
         guard SessionManager.shared.user != nil else {
             return
         }
