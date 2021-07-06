@@ -36,7 +36,7 @@ let package = Package(
             ],
             resources: [
                 .copy("MobileRTCResources.bundle"),
-                .process("Assets.xcassets")]),
+                .copy("Sources/OnCallKit/Assets.xcassets")]),
         .binaryTarget(
             name: "MobileRTC",
             path: "MobileRTC.xcframework"
