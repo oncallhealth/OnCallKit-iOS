@@ -1,0 +1,310 @@
+// Login
+
+"login_email" = "Email";
+"login_password" = "Password";
+"login_login" = "Login";
+"login_forgot_password" = "Forgot password?";
+"login_footer_primary" = "To use this app, you must have an existing account with %@";
+"login_footer_secondary" = "Learn more at";
+"login_sso" = "Login with %@";
+"login_virtual_care" = "Login with virtual care";
+"login_incorrect_username_password" = "Please enter a correct email and password. Note that passwords are case sensitive.";
+"logout" = "Logout";
+"sign_up" = "Sign up";
+"two_factor_authentication" = "Two-factor authentication";
+"two_factor_authentication_message_1" = "A security code has been sent via SMS text to your registered device with a phone number ending in %@.";
+"two_factor_authentication_message_2" = "Please enter the code you received to proceed.";
+"two_factor_authentication_message_3" = "The code will expire in 10 minutes.";
+"resend_code" = "Resend code";
+"issues_logging_in" = "Issues logging in?";
+"app_out_of_date" = "Your app is out of date";
+"app_out_of_date_instructions" = "Please update your app to proceed.";
+"go_to_app_store" = "Go to app store";
+"code_resent" = "Code resent";
+"invalid_code" = "The code you submitted is invalid. Please try again.";
+
+// Appointments
+
+"appointments" = "Appointments";
+"appointment" = "Appointment";
+"appointments_upcoming" = "Upcoming";
+"appointments_past" = "Past";
+"join_video_session" = "Join video session";
+"join_video_session_in" = "Join video session in about %@";
+"appointment_complete" = "Complete";
+"search_bar_placeholder" = "Search";
+"cancel_appointment" = "In case of cancellation, participants will be notified by e-mail";
+"are_you_sure_cancel_appointment" = "Are you sure you want to cancel your appointment?";
+"patient_cancel_appt" = "There will be a $%.2f fee for cancellations with less than %d hours notice.";
+"participant_list" = "Participant List";
+"appointment_summary" = "Appointment Summary";
+"confirm_complete_and_charge" = "Complete the appointment?";
+"error_title" = "Appointment needs a title.";
+"error_participants_min" = "Appointment needs at least one participant.";
+"error_participants_max" = "Appointment can have up to 15 participants.";
+"participants" = "Participants";
+"number_of_participants" = "%d participants";
+"add_participant" = "Add participant";
+"edit_participant" = "Edit participant";
+"create_appointment" = "Create appointment";
+"edit_appointment" = "Edit appointment";
+"confirm_delete_participant" = "Are you sure you want to delete this participant?";
+"provider" = "Provider";
+"appt_type" = "Appt. Type";
+"appt_title" = "Appt. Title";
+"time" = "Time";
+"duration" = "Duration";
+"phone" = "Phone";
+"phone_optional" = "Phone (optional)";
+"appointments_zero" = "No appointments yet.";
+"video" = "Video";
+"in_person" = "In person";
+"no_show" = "No show";
+"no_charge" = "No charge";
+"patient_notes" = "Patient notes";
+"patient_notes_hint" = "Add additional notes for patient to review (optional).";
+"invalid_fee" = "Please enter a valid fee or leave it blank.";
+"fee_too_low" = "Appointment fee must be greater than $0.50";
+"invoice" = "Invoice";
+"time_remaining" = "Time Remaining";
+"higher_video_qualities_notice" = "Higher video qualities will cause your battery to drain faster";
+"set_video_quality" = "Set Video Quality";
+"incomplete" = "Incomplete";
+"patient_cancelled" = "Patient cancelled";
+"provider_cancelled" = "Provider cancelled";
+"coordinator_cancelled" = "Coordinator cancelled";
+"staff_cancelled" = "Staff cancelled";
+"no_show_fee_charged" = "No show fee charged";
+"fee_waived" = "Fee waived";
+"could_not_fetch_appointments" = "Could not fetch appointments";
+"appointment_created" = "Appointment created";
+"appointment_updated" = "Appointment updated";
+"appointment_completed" = "Appointment completed";
+"appointment_cancelled" = "Appointment cancelled";
+"invoice_saved" = "Invoice saved";
+"invoice_sent" = "Invoice sent";
+"video_connection_failed" = "Could not connect to the video appointment due to an error";
+"new_appointment" = "New appointment";
+"division" = "Division";
+"divisions" = "Divisions";
+"pending" = "Pending";
+"accept" = "Accept";
+"decline" = "Decline";
+"accept_pending_appointment" = "By accepting, this appointment will be added to Upcoming Appointments. The patient will be notified.";
+"decline_pending_appointment" = "By declining, this appointment will be removed from Pending Appointments. The patient will be notified.";
+"confirm" = "Confirm";
+"confirm_dont_show_again" = "Confirm - don't show this again";
+"never_mind" = "Never mind";
+"appointment_was_created" = "Appointment has been created";
+"appointment_was_declined" = "Appointment has been declined";
+"appointment_request" = "Appointment Request";
+"unsupported_appointment" = "This type of appointment is not supported on this version of the app. Please update the app from the App Store.";
+
+// Recurring Appointments
+
+"recurring_appointment" = "Recurring appointment";
+"recurring" = "Recurring";
+"frequency" = "Frequency";
+"occurrences" = "Occurrences";
+"daily" = "Daily";
+"weekly" = "Weekly on %@";
+"biweekly" = "Biweekly on %@";
+"monthly" = "Monthly on the %@";
+"monthly_on_first" = "Monthly on the first %@";
+"monthly_on_second" = "Monthly on the second %@";
+"monthly_on_third" = "Monthly on the third %@";
+"monthly_on_fourth" = "Monthly on the fourth %@";
+"monthly_on_fifth" = "Monthly on the fifth %@";
+"monthly_on_last" = "Monthly on the last %@";
+"occurrences_error" = "You may have up to 52 occurrences";
+"this_appointment_only" = "This appointment only";
+"what_would_you_like_to_cancel" = "What would you like to cancel?";
+"total_appointments_in_series" = "Total appointments in series:";
+"next_upcoming_in_series" = "Next upcoming appointment in series";
+"all_appointments_in_series" = "All %d appointments in series";
+"cancel_recurring_appointment" = "Cancel all recurring appointments";
+
+// Messages
+
+"announcement" = "Announcement";
+"announcement_updated" = "Announcement updated";
+"messages" = "Messages";
+"message" = "Message";
+"enter_message" = "Enter message";
+"future_message" = "This message appointment will start on %@";
+"no_messages" = "This conversation contains no messages";
+"message_thread_closed" = "This conversation is closed.";
+"no_message_threads" = "No messages";
+"read_more" = "Read more";
+"view_participants" = "View %d participants";
+"active" = "Active";
+"archived" = "Archived";
+"new_conversation" = "Start a new conversation";
+"send" = "Send";
+"sending" = "Sending...";
+"could_not_fetch_messages" = "Could not fetch messages";
+"message_thread_empty_window" = "Active or closed chats will appear in this window";
+
+// Files & Forms
+
+"forms" = "Forms";
+"form" = "Form";
+"files" = "Files";
+"file" = "File";
+"attachments" = "Attachments";
+"attachment" = "Attachment";
+"assign_form_instructions" = "Select which participants you would like to send this form to.";
+"assign_form_error_no_selection" = "Must assign form to at least one participant.";
+"assign_form_error" = "Could not assign form. Please try again later.";
+"assign_form" = "Assign Form";
+"unassign_form" = "Unassign Form";
+"unassign_form_error" = "Could not unassign form";
+"remove_file" = "Remove file";
+"remove_file_error" = "Could not delete file. Please try again later.";
+"update_file_visibility_error" = "Could not update file visibility. Please try again later.";
+"no_files" = "No files yet.";
+"attach_document" = "Attach a document";
+"attach_image" = "Attach an image";
+"attachment_name" = "Attachment Name";
+"enter_attachment_name" = "Enter a name for the attachment";
+"could_not_fetch_attachments" = "Could not fetch attachments";
+"file_uploaded" = "File uploaded";
+"file_deleted" = "File deleted";
+"form_assigned" = "Form assigned";
+"form_unassigned" = "Form unassigned";
+"form_submitted" = "Form has been completed successfully";
+"form_not_submitted" = "Form could not be submitted. Please try again later.";
+"form_not_found" = "Form could not be opened. Please try again later.";
+"file_saved" = "File saved";
+"file_sent" = "File sent";
+
+// Payment Info
+
+"payment_info_required" = "Payment information required";
+"payment_later" = "I'll do it later";
+"payment_info_paragraph_1" = " requires your payment information to confirm your upcoming appointment.";
+"payment_info_paragraph_2" = "Your card will";
+"payment_info_paragraph_3" = "until your appointment is complete and you will receive a";
+"payment_info_paragraph_4" = "to submit to your insurance provider (if applicable).";
+"not_be_charged" = " not be charged ";
+"receipt" = " receipt ";
+"payment_information" = "Payment Information";
+"payment_info_valid" = "You have valid payment information on file.";
+"payment_info_missing" = "Your account is missing payment information.";
+"payment_info_update" = "Update payment method";
+"payment_info_failed" = "Your payment method failed to update.";
+"payment_update_succeeded" = "Payment information successfully updated";
+
+// Payment Reprocessing
+
+"charge_failed" = "Charge failed";
+"error_charging_participants" = "Error charging participant(s)";
+"reprocess_payment_instructions" = "Please select the participants that you would like to reprocess.";
+"select_all" = "Select all";
+"payment_failed" = "Payment Failed";
+"process_payments" = "Process payments";
+"processing_payments" = "Processing payments...";
+"payments_processed" = "Payments processed";
+"payment_processing_failed_next_steps" = "One or more payments failed. Contact the participants to resolve the issues and try again.";
+"processing" = "Processing...";
+"processed" = "Processed";
+"failed_to_process" = "Failed to process";
+
+// Roster
+
+"roster" = "Roster";
+"confirm_delete_contact" = "Are you sure you want to delete this contact from your roster?";
+"contact_email_notice" = "Emails cannot be changed";
+"invalid_name" = "Please enter a valid name.";
+"invalid_phone" = "Please enter a valid phone number.";
+"invalid_email" = "Please enter a valid email.";
+"unsaved_changes" = "You have unsaved changes. Would you like to discard them?";
+"add_to_roster" = "Add to roster";
+"new_contact" = "Add new contact";
+"no_suggestions" = "No suggestions";
+"no_contacts" = "No contacts";
+"contact_details_will_appear_here" = "Contact details will appear in this window";
+"roster_contact_created" = "Roster contact created";
+
+// Push Notifications - DO NOT CHANGE THE KEYS UNLESS THE SAME CHANGE IS BEING MADE ON THE API SIDE
+"notification_new_message" = "You have a new message";
+
+// Permissions
+
+"no_camera_access" = "%@ does not have access to your camera. To enable access, tap Settings and turn on Camera";
+"no_microphone_access" = "%@ does not have access to your microphone. To enable access, tap Settings and turn on Microphone";
+"no_camera_microphone_access" = "%@ does not have access to your camera and microphone. To enable access, tap Settings and turn on Camera and Microphone";
+
+// Forgot Password
+
+"forgot_password" = "Forgot Password?";
+"reset_email_sent" = "Reset email sent";
+"enter_email_instructions" = "Enter your email below, and we'll send you a link with instructions on how to set a new password.";
+"email_sent_instructions" = "We've emailed you instructions for setting your password. If an account exists with the email you entered, you should receive them shortly.\n\nIf you don't receive our email, please make sure you've entered the address you registered with, and check your spam folder.";
+"send_instructions" = "Send instructions to reset";
+"go_back_to_login" = "Go back to login";
+"could_not_send_reset_email" = "Could not send email. Please try again later.";
+
+// Biometrics
+
+"sign_in_face_id" = "Sign in with Face ID";
+"sign_in_touch_id" = "Sign in with Touch ID";
+"enable_face_id" = "Enable Face ID";
+"enable_touch_id" = "Enable Touch ID";
+"face_id_description" = "By enabling Face ID, you will be able to login without having to enter your password. You can always enable or disable Face ID later under the Profile tab";
+"touch_id_description" = "By enabling Face ID, you will be able to login without having to enter your password. You can always enable or disable Face ID later under the Profile tab";
+
+// Miscellaneous
+
+"or" = "or";
+"something_went_wrong" = "Something went wrong. Please try again later.";
+"done" = "Done";
+"are_you_sure" = "Are you sure?";
+"yes" = "Yes";
+"no" = "No";
+"ok" = "OK";
+"cancel" = "Cancel";
+"name" = "Name";
+"profile" = "Profile";
+"email" = "Email";
+"complete" = "Complete";
+"save" = "Save";
+"create" = "Create";
+"update" = "Update";
+"uploaded" = "Uploaded";
+"submit" = "Submit";
+"fee" = "Fee";
+"date" = "Date";
+"new" = "New";
+"refresh" = "Refresh";
+"delete" = "Delete";
+"notes" = "Notes";
+"images" = "Images";
+"documents" = "Documents";
+"version" = "Version";
+"basic_error_title" = "Error";
+"error_restart" = "An unexpected error has occurred. Please quit and reopen %@.";
+"settings" = "Settings";
+"high" = "High";
+"medium" = "Medium";
+"low" = "Low";
+"preview" = "Preview";
+"date_optional" = "Date (optional)";
+"time_optional" = "Time (optional)";
+"try_again" = "Try again";
+"no_internet_connection" = "No Internet Connection";
+"remove" = "Remove";
+"loading" = "Loading...";
+"help" = "Help";
+"close" = "Close";
+"drag_down_to_refresh" = "Drag down to refresh your list";
+"gender" = "Gender";
+"date_of_birth" = "Date of birth";
+"unknown" = "Unknown";
+"for" = "for";
+"enable" = "Enable";
+"maybe_later" = "Maybe later";
+"next" = "Next";
+"code" = "Code";
+"resources" = "Resources";
+"optional" = "Optional";
