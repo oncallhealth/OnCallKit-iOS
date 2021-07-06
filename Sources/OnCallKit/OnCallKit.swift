@@ -61,6 +61,8 @@ public struct OnCallKit {
             return
         }
             
-        VideoCallHelper().joinCall(for: appointmentId, callingViewController: viewController)
+        videoCallHelper.joinCall(for: appointmentId, callingViewController: viewController)
     }
+    
+    private static let videoCallHelper = VideoCallHelper()
 }
