@@ -33,7 +33,7 @@ class SessionManager {
                 
                 self.user = user
                 self.providers = providers
-                connectSocket()
+                self.connectSocket()
                 complete(true)
             }
         }
