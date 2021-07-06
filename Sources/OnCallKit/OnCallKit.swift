@@ -64,5 +64,23 @@ public struct OnCallKit {
         videoCallHelper.joinCall(for: appointmentId, callingViewController: viewController)
     }
     
+    public static func getMessageAppointmentViewController(for threadId: Int, viewController: UIViewController) {
+        guard SessionManager.shared.user != nil else {
+            return
+        }
+        
+        SessionManager.shared.apiManager.fetchThread(threadId: threadId) { thread in
+            guard let thread = thread else {
+                return
+            }
+            
+            viewController.present(
+                MessageThreadContainerViewController(
+                    threadStub: thread,
+                    presentationType: .modal(fromDeeplink: false)),
+                animated: true)
+        }
+    }
+    
     private static let videoCallHelper = VideoCallHelper()
 }
