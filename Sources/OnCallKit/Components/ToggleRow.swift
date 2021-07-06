@@ -37,6 +37,7 @@ class ToggleRow: UITableViewCell {
         }
         
         label.font = .systemFont(ofSize: 14)
+        label.isAccessibilityElement = false
         
         toggle.onTintColor = .primary
         toggle.addTarget(self, action: #selector(didSwitch), for: .valueChanged)
@@ -57,6 +58,10 @@ class ToggleRow: UITableViewCell {
     func configure(text: String, isOn: Bool) {
         label.text = text
         toggle.isOn = isOn
+    }
+    
+    func setAccessibilityLabel(accessibilityLabel: String) {
+        self.toggle.accessibilityLabel = accessibilityLabel
     }
     
     // MARK: Private

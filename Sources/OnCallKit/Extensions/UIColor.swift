@@ -108,26 +108,26 @@ extension UIColor {
     
     static var primary: UIColor {
         guard #available(iOS 13.0, *) else {
-            return .from(hexString: WhitelabelHelper.shared.primaryColor.light)
+            return .from(hexString: SessionManager.shared.primaryColor.light)
         }
         
-        return UIColor { $0.userInterfaceStyle == .dark ? .from(hexString: WhitelabelHelper.shared.primaryColor.dark) : .from(hexString: WhitelabelHelper.shared.primaryColor.light) }
+        return UIColor { $0.userInterfaceStyle == .dark ? .from(hexString: SessionManager.shared.primaryColor.dark) : .from(hexString: SessionManager.shared.primaryColor.light) }
     }
     
     static var primaryWhite: UIColor {
         guard #available(iOS 13.0, *) else {
-            return .from(hexString: WhitelabelHelper.shared.primaryColor.light)
+            return .from(hexString: SessionManager.shared.primaryColor.light)
         }
         
-        return UIColor { $0.userInterfaceStyle == .dark ? .white : .from(hexString: WhitelabelHelper.shared.primaryColor.light) }
+        return UIColor { $0.userInterfaceStyle == .dark ? .white : .from(hexString: SessionManager.shared.primaryColor.light) }
     }
     
     static var secondary: UIColor {
         guard #available(iOS 13.0, *) else {
-            return .from(hexString: WhitelabelHelper.shared.secondaryColor.light)
+            return .from(hexString: SessionManager.shared.secondaryColor.light)
         }
         
-        return UIColor { $0.userInterfaceStyle == .dark ? .white : .from(hexString: WhitelabelHelper.shared.secondaryColor.light) }
+        return UIColor { $0.userInterfaceStyle == .dark ? .white : .from(hexString: SessionManager.shared.secondaryColor.light) }
     }
     
     static var labelText: UIColor {

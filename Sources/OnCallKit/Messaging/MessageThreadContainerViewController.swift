@@ -6,7 +6,7 @@
 //  Copyright © 2020 OnCall Health. All rights reserved.
 //
 
-//import Reachability
+import Network
 import SnapKit
 import UIKit
 
@@ -35,7 +35,7 @@ class MessageThreadContainerViewController: OCViewController {
         moreOptionsButton.setContent(icon: "ic-vertical-ellipsis".iconTemplate())
         moreOptionsButton.isHidden = true
         
-        let insets = UIEdgeInsets(top: 10, left: 12.5, bottom: 10, right: 12.5)
+        let insets = UIEdgeInsets(top: 10, left: 0, bottom: 10, right: 25)
         viewAttachmentsButton.imageEdgeInsets = insets
         moreOptionsButton.imageEdgeInsets = insets
         editAnnouncementButton.imageEdgeInsets = insets
@@ -109,6 +109,9 @@ class MessageThreadContainerViewController: OCViewController {
             messagingAnnouncement.lineBreakMode = .byTruncatingTail
             
             announcementStackView.addArrangedSubview(editAnnouncementButton)
+            
+            editAnnouncementButton.isAccessibilityElement = true
+            editAnnouncementButton.accessibilityLabel = "Edit announcement"
             editAnnouncementButton.setInteractions { [weak self] in
                 self?.didTapViewAnnouncement()
             }
@@ -129,6 +132,7 @@ class MessageThreadContainerViewController: OCViewController {
             viewAnnouncementButton.setTitleColor(.primaryWhite, for: .normal)
             viewAnnouncementButton.titleLabel?.font = .boldSystemFont(ofSize: 14)
             viewAnnouncementButton.addTarget(self, action: #selector(didTapViewAnnouncement), for: .touchUpInside)
+            viewAnnouncementButton.isAccessibilityElement = false
             
             viewAnnouncementButton.snp.makeConstraints {
                 $0.equalTo(safeAreaEdge: .leading, of: self).offset(15)
@@ -142,7 +146,6 @@ class MessageThreadContainerViewController: OCViewController {
             }
         }
         
-        //contentView.addSubview(noInternetNoticeBar)
         contentView.addSubview(loadingIndicator)
         
         messagesViewController.willMove(toParent: self)
@@ -151,27 +154,31 @@ class MessageThreadContainerViewController: OCViewController {
         messagesViewController.didMove(toParent: self)
         messagesViewController.delegate = self
         
+        contentView.addSubview(noInternetNoticeBar)
+        
         messagesViewController.view.snp.makeConstraints {
             $0.top.equalTo(!(threadStub.announcementText?.isEmpty ?? true) ? announcementDivider.snp.bottom : divider.snp.bottom)
             $0.leading.trailing.bottom.equalToSuperview()
         }
         
-//        viewAttachmentsButton.setInteractions { [weak self] in
-//            let appointment = self?.fullThread?.appointment ?? threadStub.appointment
-//            let attachmentsViewController = AttachmentsTabViewController(
-//                appointment: appointment,
-//                presentationType: .modal,
-//                canEditForms: SessionManager.shared.user?.ownsAppointment(appointment) ?? false)
-//            attachmentsViewController.delegate = self
-//
-//            IQKeyboardManager.shared.enable = true
-//            self?.present(attachmentsViewController, animated: true)
-//        }
+        viewAttachmentsButton.isAccessibilityElement = true
+        viewAttachmentsButton.accessibilityLabel = "View attachments"
+        viewAttachmentsButton.setInteractions { [weak self] in
+            let appointment = self?.fullThread?.appointment ?? threadStub.appointment
+            let attachmentsViewController = AttachmentsTabViewController(
+                appointment: appointment,
+                presentationType: .modal,
+                canEditForms: SessionManager.shared.user?.ownsAppointment(appointment) ?? false)
+            attachmentsViewController.delegate = self
+            
+            //IQKeyboardManager.shared.enable = true
+            self?.present(attachmentsViewController, animated: true)
+        }
         
         if #available(iOS 14.0, *) {
-            moreOptionsButton.menu = UIMenu(
-                options: .displayInline,
-                children: [UIAction(title: "complete".localized(), handler: { _ in self.didTapComplete() })])
+            let completeButton = UIAction(title: "complete".localized(), handler: { _ in self.didTapComplete() })
+            completeButton.accessibilityLabel = "Complete message appointment"
+            moreOptionsButton.menu = UIMenu(options: .displayInline, children: [completeButton])
             moreOptionsButton.showsMenuAsPrimaryAction = true
         } else {
             moreOptionsButton.setInteractions { [weak self] in
@@ -184,6 +191,8 @@ class MessageThreadContainerViewController: OCViewController {
                 let completeAction = UIAlertAction(title: "complete".localized(), style: .default) { _ in
                     self.didTapComplete()
                 }
+                
+                completeAction.accessibilityLabel = "Complete message appointment"
                 
                 let cancelAction = UIAlertAction(title: "cancel".localized(), style: .cancel) { _ in
                     alert.dismiss(animated: true, completion: nil)
@@ -199,16 +208,19 @@ class MessageThreadContainerViewController: OCViewController {
             }
         }
         
+        moreOptionsButton.isAccessibilityElement = true
+        moreOptionsButton.accessibilityLabel = "View additional options"
+        
         updateThreadHeader(with: threadStub)
         
-//        noInternetNoticeBar.configure(text: "no_internet_connection".localized())
-//
-//        noInternetNoticeBar.snp.makeConstraints {
-//            $0.top.equalTo(!(threadStub.announcementText?.isEmpty ?? true) ? announcementDivider.snp.bottom : divider.snp.bottom)
-//            $0.leading.trailing.equalToSuperview()
-//        }
-//
-//        noInternetNoticeBar.alpha = 0
+        noInternetNoticeBar.configure(text: "no_internet_connection".localized())
+        
+        noInternetNoticeBar.snp.makeConstraints {
+            $0.top.equalTo(!(threadStub.announcementText?.isEmpty ?? true) ? announcementDivider.snp.bottom : divider.snp.bottom)
+            $0.leading.trailing.equalToSuperview()
+        }
+        
+        noInternetNoticeBar.alpha = 0
         
         loadingIndicator.startAnimating()
         loadingIndicator.snp.makeConstraints {
@@ -218,15 +230,23 @@ class MessageThreadContainerViewController: OCViewController {
         
         hidesBottomBarWhenPushed = true
         
-//        reachability?.whenUnreachable = { [weak self] _ in
-//            self?.animateNoticeBarLayoutChanges(isHidden: false)
-//            self?.messagesViewController.isSendButtonEnabled = false
-//        }
-//
-//        reachability?.whenReachable = { [weak self] _ in
-//            self?.animateNoticeBarLayoutChanges(isHidden: true)
-//            self?.messagesViewController.isSendButtonEnabled = true
-//        }
+        networkMonitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async {
+                if path.status == .satisfied {
+                    self?.animateNoticeBarLayoutChanges(isHidden: true)
+                    self?.messagesViewController.isSendButtonEnabled = true
+                } else {
+                    self?.animateNoticeBarLayoutChanges(isHidden: false)
+                    self?.messagesViewController.isSendButtonEnabled = false
+                }
+            }
+        }
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(didReceiveMessage(_:)),
+            name: Notification.Name.didReceiveWebsocketMessage,
+            object: nil)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -242,6 +262,17 @@ class MessageThreadContainerViewController: OCViewController {
         
         //NotificationManager.removeNotifications(for: .messageReceived(threadId: threadStub.id))
         //IQKeyboardManager.shared.enable = false
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            UIAccessibility.post(notification: .screenChanged, argument: self)
+        }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        networkMonitor.start(queue: DispatchQueue.global(qos: .background))
+        isBeingShown = true
     }
     
     override func viewDidLayoutSubviews() {
@@ -250,10 +281,12 @@ class MessageThreadContainerViewController: OCViewController {
         updateAnnouncementVisibility()
     }
     
-//    override func viewWillDisappear(_ animated: Bool) {
-//        super.viewWillDisappear(animated)
-//        reachability?.stopNotifier()
-//    }
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        networkMonitor.cancel()
+        isBeingShown = false
+    }
     
     override func didTapTitleIcon(_ sender: Any?) {
         dismissViewController()
@@ -261,7 +294,7 @@ class MessageThreadContainerViewController: OCViewController {
     
     // MARK: Private
     
-    //private let reachability = try? Reachability()
+    private let networkMonitor = NWPathMonitor()
     
     private let announcementStackView = UIStackView()
     private let threadStub: MessagingThread
@@ -273,35 +306,61 @@ class MessageThreadContainerViewController: OCViewController {
     private let moreOptionsButton = IconButton(size: .small)
     private let viewAttachmentsButton = IconButton(size: .small)
     private let editAnnouncementButton = IconButton(size: .small)
-    //private let noInternetNoticeBar = NoticeBar()
+    private let noInternetNoticeBar = NoticeBar()
     private let messagesViewController: MessageThreadViewController
     private let loadingIndicator = UIActivityIndicatorView(indicatorStyle: .large)
     private let messagingAnnouncement = UILabel()
+    private var isBeingShown = false
     
     private var viewAnnouncementButtonHeightConstraint: Constraint?
     
-//    private func animateNoticeBarLayoutChanges(isHidden: Bool) {
-//        UIView.animate(withDuration: 0.5) {
-//            self.noInternetNoticeBar.alpha = isHidden ? 0 : 1
-//            self.view.layoutIfNeeded()
-//        }
-//    }
+    private func animateNoticeBarLayoutChanges(isHidden: Bool) {
+        UIView.animate(withDuration: 0.5) {
+            self.noInternetNoticeBar.alpha = isHidden ? 0 : 1
+            self.view.layoutIfNeeded()
+        }
+    }
+    
+    private func fetchAppointment(completion: @escaping (AppointmentModel?) -> Void) {
+        SessionManager.shared.apiManager.getAppointment(id: self.threadStub.appointment.id) { appointment in
+            completion(appointment)
+        }
+    }
+    
+    private func updateAttachmentBadgeNumber(manuallyIncrement: Bool = false) {
+        if manuallyIncrement {
+            viewAttachmentsButton.setContent(
+                icon: "file".iconTemplate(),
+                badgeNumber: viewAttachmentsButton.badgeNumber ?? 0 + 1)
+        }
+        
+        fetchAppointment { appointment in
+            guard let appointment = appointment else {
+                return
+            }
+            
+            self.viewAttachmentsButton.setContent(
+                icon: "file".iconTemplate(),
+                badgeNumber: appointment.attachmentCount + appointment.formAssignmentCount)
+        }
+    }
     
     private func didTapComplete() {
-   
 //        let indicator = presentLoadingIndicator()
-//        SessionManager.shared.apiManager.getAppointment(id: self.threadStub.appointment.id){ appointment in
-//            
+//        fetchAppointment { appointment in
 //            indicator.dismiss {
-////                guard let appointment = appointment else {
-////                    self.presentSnackbar()
-////                    return
-////                }
-//                
-////                let viewController = AppointmentSummaryViewController(appointment: appointment, source: .messages)
-////                viewController.delegate = self
-////                IQKeyboardManager.shared.enable = true
-////                self.present(viewController, animated: true)
+//                guard let appointment = appointment else {
+//                    self.presentSnackbar()
+//                    return
+//                }
+//
+//                let viewController = AppointmentSummaryViewController(
+//                    viewModel: AppointmentSummaryViewModel(appointment: appointment),
+//                    source: .messages)
+//
+//                viewController.delegate = self
+//                IQKeyboardManager.shared.enable = true
+//                self.present(viewController, animated: true)
 //            }
 //        }
     }
@@ -330,6 +389,8 @@ class MessageThreadContainerViewController: OCViewController {
                 String(format: "view_participants".localized(), thread.threadUsers.count),
                 for: .normal)
         }
+        
+        updateAttachmentBadgeNumber()
     }
     
     private func updateAnnouncementVisibility() {
@@ -346,16 +407,16 @@ class MessageThreadContainerViewController: OCViewController {
     }
     
     @objc private func didTapViewAnnouncement() {
-//        let isProvider = SessionManager.shared.user?.ownsAppointment(threadStub.appointment) ?? false
-//        let messagingThread = self.fullThread ?? threadStub
-//        let announcementText = threadStub.announcementText ?? ""
-//        let messageAnnouncementViewController = MessageAnnouncementViewController(
-//            messagingThread: messagingThread,
-//            announcementText: announcementText,
-//            isEditable: isProvider)
-//
-//        messageAnnouncementViewController.delegate = self
-//        self.present(messageAnnouncementViewController, animated: true)
+        let isProvider = SessionManager.shared.user?.ownsAppointment(threadStub.appointment) ?? false
+        let messagingThread = self.fullThread ?? threadStub
+        let announcementText = threadStub.announcementText ?? ""
+        let messageAnnouncementViewController = MessageAnnouncementViewController(
+            messagingThread: messagingThread,
+            announcementText: announcementText,
+            isEditable: isProvider)
+        
+        messageAnnouncementViewController.delegate = self
+        self.present(messageAnnouncementViewController, animated: true)
     }
     
     @objc private func didTapParticipantsButton() {
@@ -369,14 +430,24 @@ class MessageThreadContainerViewController: OCViewController {
     @objc private func onAuthorizationFail() {
         //NotificationManager.createDeferedDeeplink(for: .messageReceived(threadId: threadStub.id))
     }
+    
+    @objc private func didReceiveMessage(_ notification: Notification) {
+        guard isBeingShown,
+              let message = notification.userInfo?["message"] as? WebsocketMessageModel,
+              message.type == .attachmentAdded,
+              message.threadId == fullThread?.id else
+        {
+            return
+        }
+        
+        updateAttachmentBadgeNumber(manuallyIncrement: true)
+    }
 }
 
 // MARK: MessageThreadViewControllerDelegate
 
 extension MessageThreadContainerViewController: MessageThreadViewControllerDelegate {
     func threadUpdated(_ thread: MessagingThread) {
-        //try? reachability?.startNotifier()
-        
         loadingIndicator.stopAnimating()
         fullThread = thread
         updateThreadHeader(with: thread)
@@ -398,18 +469,22 @@ extension MessageThreadContainerViewController: TokenExpiryHandleable {
 
 // MARK: TokenExpiryHandler
 
-//extension MessageThreadContainerViewController: AttachmentsTabViewControllerDelegate {
-//    func didReceive403Error(handler: @escaping () -> Void) {
-//        delegate?.didReceive403Error(handler: handler)
-//    }
-//}
-//
-//// MARK: AppointmentSummaryViewControllerDelegate
-//
+extension MessageThreadContainerViewController: AttachmentsTabViewControllerDelegate {
+    func didUpdateAttachments() {
+        updateAttachmentBadgeNumber()
+    }
+    
+    func didReceive403Error(handler: @escaping () -> Void) {
+        delegate?.didReceive403Error(handler: handler)
+    }
+}
+
+// MARK: AppointmentSummaryViewControllerDelegate
+
 //extension MessageThreadContainerViewController: AppointmentSummaryViewControllerDelegate {
-//    func appointmentComplete(snackbar snackbarType: SnackbarType) {
+//    func appointmentComplete(snackbarType: Snackbar.SnackbarType) {
 //        presentSnackbar(snackbarType)
-//
+//        
 //        if UIDevice.current.isIpad {
 //            messagesViewController.refreshMessageThread()
 //        } else {
@@ -417,15 +492,15 @@ extension MessageThreadContainerViewController: TokenExpiryHandleable {
 //        }
 //    }
 //}
-//
-//// MARK: MessageAnnouncementViewControllerDelegate
-//
-//extension MessageThreadContainerViewController: MessageAnnouncementViewControllerDelegate{
-//    func updateAnnouncement(announcementText: String) {
-//        let announcement = NSMutableAttributedString(string: "announcement".localized() + ": ", attributes:[NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize:14)])
-//        announcement.append(NSAttributedString(string: announcementText, attributes:[NSAttributedString.Key.font: UIFont.systemFont(ofSize: 14)]))
-//        messagingAnnouncement.attributedText = announcement
-//        threadStub.announcementText = announcementText
-//        updateAnnouncementVisibility()
-//    }
-//}
+
+// MARK: MessageAnnouncementViewControllerDelegate
+
+extension MessageThreadContainerViewController: MessageAnnouncementViewControllerDelegate{
+    func updateAnnouncement(announcementText: String) {
+        let announcement = NSMutableAttributedString(string: "announcement".localized() + ": ", attributes:[NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize:14)])
+        announcement.append(NSAttributedString(string: announcementText, attributes:[NSAttributedString.Key.font: UIFont.systemFont(ofSize: 14)]))
+        messagingAnnouncement.attributedText = announcement
+        threadStub.announcementText = announcementText
+        updateAnnouncementVisibility()
+    }
+}

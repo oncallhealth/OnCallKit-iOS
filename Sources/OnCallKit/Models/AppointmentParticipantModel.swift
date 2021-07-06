@@ -11,7 +11,7 @@ struct AppointmentParticipantCreationModel: Codable {
 
 // MARK: - AppointmentParticipantModel
 
-class AppointmentParticipantModel: Codable {
+public class AppointmentParticipantModel: Codable, Equatable {
     
     // MARK: CodingKeys
     
@@ -21,24 +21,16 @@ class AppointmentParticipantModel: Codable {
     
     // MARK: Lifecycle
     
-    init(id: Int? = nil, name: String, email: String, fee: Float, addToRoster: Bool = false) {
-        self.id = id
-        self.name = name
-        self.email = email
-        self.fee = fee
-        self.addToRoster = addToRoster
-    }
-    
-    private init(
-        id: Int?,
-        url: String,
-        chargeId: Int?,
-        invoiceUrl: String?,
-        requiresPaymentInfo: Bool?,
+    init(
+        id: Int? = nil,
+        url: String? = nil,
+        chargeId: Int? = nil,
+        invoiceUrl: String? = nil,
+        requiresPaymentInfo: Bool? = nil,
         name: String,
         email: String,
-        fee: Float?,
-        addToRoster: Bool)
+        fee: Float? = nil,
+        addToRoster: Bool = false)
     {
         self.id = id
         self.url = url
@@ -51,7 +43,7 @@ class AppointmentParticipantModel: Codable {
         self.addToRoster = addToRoster
     }
     
-    required convenience init(from decoder: Decoder) throws {
+    required convenience public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let fee = try? container.decode(String?.self, forKey: .fee)
         
@@ -59,7 +51,7 @@ class AppointmentParticipantModel: Codable {
             id: try container.decode(Int.self, forKey: .id),
             url: try container.decode(String.self, forKey: .url),
             chargeId: try container.decode(Int?.self, forKey: .chargeId),
-            invoiceUrl: try container.decode(String?.self, forKey: .invoiceUrl),
+            invoiceUrl: try container.decodeIfPresent(String.self, forKey: .invoiceUrl),
             requiresPaymentInfo: try? container.decode(Bool?.self, forKey: .requiresPaymentInfo),
             name: try container.decode(String.self, forKey: .name),
             email: try container.decode(String.self, forKey: .email),
@@ -78,5 +70,16 @@ class AppointmentParticipantModel: Codable {
     var email: String
     var fee: Float?
     var addToRoster: Bool
-
+    
+    public static func == (lhs: AppointmentParticipantModel, rhs: AppointmentParticipantModel) -> Bool {
+        return lhs.id == rhs.id &&
+            lhs.url == rhs.url &&
+            lhs.chargeId == rhs.chargeId &&
+            lhs.invoiceUrl == rhs.invoiceUrl &&
+            lhs.requiresPaymentInfo == rhs.requiresPaymentInfo &&
+            lhs.name == rhs.name &&
+            lhs.email == rhs.email &&
+            lhs.fee == rhs.fee &&
+            lhs.addToRoster == rhs.addToRoster
+    }
 }

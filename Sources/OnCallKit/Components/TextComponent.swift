@@ -51,6 +51,7 @@ class TextComponent: UIView {
         fontSize: CGFloat = 14)
     {
         label.text = text
+        accessibilityLabel = text
         label.numberOfLines = numberOfLines
         
         if numberOfLines == 0 {
@@ -70,6 +71,7 @@ class TextComponent: UIView {
         fontSize: CGFloat = 14)
     {
         label.attributedText = attributedText
+        accessibilityLabel = attributedText?.string
         setLabelAttributes(fontSize: fontSize, alignment: alignment, type: type, textColor: textColor)
     }
 
@@ -90,4 +92,57 @@ class TextComponent: UIView {
     
     private let label = UILabel()
 
+}
+
+// MARK: TextComponentCell
+
+class TextComponentCell: UITableViewCell {
+    
+    // MARK: Lifecycle
+    
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        
+        contentView.addSubview(textComponent)
+        
+        textComponent.snp.makeConstraints {
+            $0.leading.equalToSuperview().offset(16)
+            $0.trailing.equalToSuperview().offset(-16)
+            $0.top.equalToSuperview().offset(5)
+            $0.bottom.equalToSuperview().offset(-5)
+        }
+        
+        selectionStyle = .none
+        backgroundColor = .background
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    // MARK: Internal
+    
+    static let reuseIdentifier = "TextComponentCell"
+    
+    func configure(
+        text: String?,
+        textColor: UIColor? = nil,
+        alignment: NSTextAlignment = .left,
+        numberOfLines: Int = 0,
+        type: TextComponent.TextType = .normal(bolded: false),
+        fontSize: CGFloat = 14)
+    {
+        textComponent.configure(
+            text: text,
+            textColor: textColor,
+            alignment: alignment,
+            numberOfLines: numberOfLines,
+            type: type,
+            fontSize: fontSize)
+    }
+    
+    // MARK: Private
+    
+    private let textComponent = TextComponent()
+    
 }

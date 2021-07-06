@@ -64,9 +64,24 @@ class DetailedTextRow: UITableViewCell {
         if let image = icon?.iconTemplate() {
             iconButton.setImage(image, for: .normal)
             iconButton.isEnabled = true
+            iconButton.isAccessibilityElement = true
         } else {
             iconButton.isEnabled = false
+            iconButton.isAccessibilityElement = false
         }
+        
+        if subtitle.isEmpty {
+            titleLabel.snp.removeConstraints()
+            titleLabel.snp.makeConstraints {
+                $0.leading.equalToSuperview().offset(24)
+                $0.centerY.equalToSuperview()
+                $0.trailing.equalTo(iconButton.snp.leading).offset(-10)
+            }
+        }
+    }
+    
+    func configureIconAccessibilityLabel(label: String) {
+        iconButton.accessibilityLabel = label
     }
     
     func setInteraction(_ didTap: @escaping () -> Void) {

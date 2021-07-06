@@ -13,28 +13,27 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/SnapKit/SnapKit", .exact("5.0.1")),
-        .package(name: "Bugsnag", url: "https://github.com/bugsnag/bugsnag-cocoa", .exact("6.8.3")),
-        .package(url: "https://github.com/huri000/SwiftEntryKit", .exact("1.2.7")),
         .package(url: "https://github.com/slackhq/PanModal", .exact("1.2.7")),
         .package(url: "https://github.com/Alamofire/Alamofire", .exact("5.4.2")),
-        .package(url: "https://github.com/mxcl/PromiseKit", .exact("6.13.2")),
-        .package(name: "KeychainSwift", url: "https://github.com/evgenyneu/keychain-swift", .exact("19.0.0")),
+        .package(url: "https://github.com/mxcl/PromiseKit", .exact("6.15.3")),
         .package(url: "https://github.com/daltoniam/Starscream", .exact("4.0.4")),
-        .package(url: "https://github.com/MessageKit/MessageKit", .exact("3.6.0"))
+        .package(url: "https://github.com/MessageKit/MessageKit", .exact("3.6.0")),
+        .package(name: "Material Components iOS", url: "https://github.com/DomenicBianchi01/material-components-ios", .exact("110.0.0")),
+        .package(url: "https://github.com/Minitour/EasyNotificationBadge", .exact("1.2.5"))
     ],
     targets: [
         .target(
             name: "OnCallKit",
             dependencies: [
                 "SnapKit",
-                "Bugsnag",
-                "SwiftEntryKit",
                 "PanModal",
                 "Alamofire",
                 "PromiseKit",
-                "KeychainSwift",
                 "Starscream",
-                "MessageKit"],
+                "MessageKit",
+                "EasyNotificationBadge",
+                .product(name: "MaterialComponents", package: "Material Components iOS")
+            ],
             resources: [
                 .copy("MobileRTCResources.bundle")]),
         .binaryTarget(

@@ -1,18 +1,24 @@
 import UIKit
 import SnapKit
 
+// MARK: - OCViewControllerDelegate
+
+protocol OCViewControllerDelegate: AnyObject {
+    func didSelectToggleIndex(_ index: Int)
+}
+
 // MARK: - OCViewController
 
 class OCViewController: UIViewController {
     
     // MARK: Lifecycle
     
-    init(titleIcon: UIImage?,
+    init(titleIcon: UIImage? = nil,
          titleIconColour: UIColor = .primary,
          title: String,
          canTruncateTitle: Bool = true,
-         titleButtons: [UIView]?,
-         toggleValues: (left: String, right: String)? = nil,
+         titleButtons: [UIView]? = nil,
+         toggleValues: [String]? = nil,
          tabBarIcon: UIImage? = nil,
          //tabIdentifier: TabIdentifier? = nil,
          fullWidth: Bool = false)
@@ -22,7 +28,19 @@ class OCViewController: UIViewController {
         self.titleButtons = titleButtons
         self.fullWidth = fullWidth
         
+        if let toggleValues = toggleValues {
+            //self.toggle = MaterialTabBar(alignment: UIDevice.current.isIpad ? .center : .leading)
+            //self.toggle?.configure(options: toggleValues, capitalized: false)
+            self.toggle = nil
+        } else {
+            self.toggle = nil
+        }
+        
         super.init(nibName: nil, bundle: nil)
+        
+//        self.toggle?.setInteraction { [weak self] selectedIndex in
+//            self?.ocViewControllerDelegate?.didSelectToggleIndex(selectedIndex)
+//        }
         
         tabBarItem.image = tabBarIcon
         //tabBarItem.tag = tabIdentifier?.rawValue ?? -1
@@ -36,6 +54,11 @@ class OCViewController: UIViewController {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapTitleIcon))
         titleIconImageView.isUserInteractionEnabled = true
         titleIconImageView.addGestureRecognizer(tapGesture)
+        
+        titleIconImageView.isAccessibilityElement = true
+        titleIconImageView.accessibilityLabel = "Go back"
+        titleIconImageView.accessibilityHint = "Tap to go back"
+        titleIconImageView.accessibilityTraits = .button
         
         titleLabel.text = title
         
@@ -56,6 +79,8 @@ class OCViewController: UIViewController {
     let contentView = UIView()
     var leftPaddingConstraint: Constraint?
     var rightPaddingConstraint: Constraint?
+    
+    weak var ocViewControllerDelegate: OCViewControllerDelegate? = nil
     
     @objc func didTapTitleIcon(_ sender: Any?) {
         // Override me
@@ -82,17 +107,23 @@ class OCViewController: UIViewController {
                 $0.equalTo(safeAreaEdge: .trailing, of: self).offset(-10)
             }
             
-            titleButtons.forEach { titleButtonStackView.addArrangedSubview($0) }
+            titleButtons.forEach {
+                titleButtonStackView.addArrangedSubview($0)
+                $0.isAccessibilityElement = false
+            }
+            
+            titleStackView.snp.makeConstraints {
+                $0.trailing.equalTo(titleButtonStackView.snp.leading).offset(-10)
+            }
+        } else {
+            titleStackView.snp.makeConstraints {
+                $0.equalTo(safeAreaEdge: .trailing, of: self).offset(-10)
+            }
         }
         
         titleStackView.snp.makeConstraints {
             $0.equalTo(safeAreaEdge: .leading, of: self).offset(24)
             $0.equalTo(safeAreaEdge: .top, of: self).offset(24)
-            if titleButtons == nil {
-                $0.equalTo(safeAreaEdge: .trailing, of: self).offset(-24)
-            } else {
-                $0.trailing.equalTo(titleButtonStackView.snp.leading).offset(-24)
-            }
         }
         
         view.addSubview(contentView)
@@ -102,36 +133,27 @@ class OCViewController: UIViewController {
             rightPaddingConstraint = $0.equalTo(safeAreaEdge: .trailing, of: self).offset(fullWidth ? 0 : -12).constraint
         }
         
-//        if let toggle = toggle {
-//            view.addSubview(toggle)
-//
-//            toggle.snp.makeConstraints {
-//                $0.width.equalTo(200)
-//            }
-//
-//            contentView.snp.makeConstraints {
-//                $0.top.equalTo(toggle.snp.bottom).offset(24)
-//            }
-//
-//            if UIDevice.current.isIpad {
-//                toggle.snp.makeConstraints {
-//                    $0.centerX.equalToSuperview()
-//                    $0.centerY.equalTo(titleStackView)
-//                }
-//            } else {
-//                toggle.snp.makeConstraints {
-//                    $0.leading.equalTo(titleStackView)
-//                    $0.top.equalTo(titleStackView.snp.bottom).offset(20)
-//                }
-//            }
-//        } else {
-//            contentView.snp.makeConstraints {
-//                $0.top.equalTo(titleStackView.snp.bottom)
-//            }
-//        }
-        
-        contentView.snp.makeConstraints {
-            $0.top.equalTo(titleStackView.snp.bottom)
+        if let toggle = toggle {
+            view.addSubview(toggle)
+            
+            contentView.snp.makeConstraints {
+                $0.top.equalTo(toggle.snp.bottom).offset(24)
+            }
+            
+            toggle.snp.makeConstraints {
+                if UIDevice.current.isIpad {
+                    $0.centerY.equalTo(titleStackView)
+                    $0.centerX.equalToSuperview()
+                    $0.width.equalTo(500)
+                } else {
+                    $0.top.equalTo(titleStackView.snp.bottom).offset(20)
+                    $0.leading.trailing.equalToSuperview()
+                }
+            }
+        } else {
+            contentView.snp.makeConstraints {
+                $0.top.equalTo(titleStackView.snp.bottom)
+            }
         }
     }
     
@@ -142,10 +164,6 @@ class OCViewController: UIViewController {
     func updateTitle(_ title: String) {
         titleLabel.text = title
     }
-    
-//    func setToggleDelegate(_ delegate: DualToggleSwitchDelegate) {
-//        toggle?.delegate = delegate
-//    }
     
     // MARK: Private
     
@@ -158,6 +176,7 @@ class OCViewController: UIViewController {
     private let titleStackView = UIStackView()
     private let titleButtonStackView = UIStackView()
     
-    //private let toggle: DualToggleSwitchView?
+    private let toggle: UIView?
+    //private let toggle: MaterialTabBar?
     
 }

@@ -47,9 +47,3 @@ extension String {
          return decoded ?? self
     }
 }
-
-class AssetProvider {
-    static func asset(named: String) -> UIImage? {
-        return UIImage(named: named, in: Bundle(for: self), compatibleWith: nil)
-    }
-}

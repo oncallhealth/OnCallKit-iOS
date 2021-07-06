@@ -6,62 +6,79 @@
 //  Copyright © 2020 OnCall Health. All rights reserved.
 //
 
-import Bugsnag
-import UIKit
 import MobileRTC
 
 // MARK: - VideoCallHelperDelegate
 
 protocol VideoCallHelperDelegate: AnyObject {
-    func didEncounterError(shouldRestart: Bool)
+    func didEncounterError(errorMessage: String)
 }
 
 // MARK: - VideoCallHelper
 
-public class VideoCallHelper: NSObject {
+class VideoCallHelper: NSObject {
     
     // MARK: Internal
     
     weak var delegate: VideoCallHelperDelegate?
     var joinedAppointment: AppointmentModel?
 
-    public func joinCall(
+    func joinCall(
         for appointment: AppointmentModel,
-        callingViewController viewController: UIViewController,
-        delegate mobileRtcDelegate: MobileRTCMeetingServiceDelegate)
+        callingViewController viewController: UIViewController & ZoomManagerDelegate)
     {
-        MobileRTC.shared().getMeetingService()?.delegate = mobileRtcDelegate
-        if appointment.zoomUrl != nil {
-            if ZoomManager.joinZoomCall(appointment: appointment) {
-                SessionManager.shared.apiManager.logVideoSession(for: appointment.id)
-                joinedAppointment = appointment
-            } else {
-                // If we could not join the zoom meeting, it might be because the division was changed from Vidyo to
-                // Zoom while the current user was still logged in. Therefore, we need to fetch an updated user object
-                // to get their zoom access token.
-                // This is a situation that should only happen the FIRST time a division is changed from Vidyo to Zoom.
-                fetchUser {
-                    if ZoomManager.joinZoomCall(appointment: appointment) {
-                        SessionManager.shared.apiManager.logVideoSession(for: appointment.id)
-                        self.joinedAppointment = appointment
-                    } else {
-                        // If the refetch still didn't allow the user to join the meeting, then something else is wrong.
-                        self.delegate?.didEncounterError(shouldRestart: true)
+        let loadingIndicator = viewController.presentLoadingIndicator()
+        
+        SessionManager.shared.apiManager.joinVideoAppointment(appointment.id) { updatedAppointment in
+            SessionManager.shared.fetchCurrentUser { _ in
+                loadingIndicator.dismiss {
+                    guard let updatedAppointment = updatedAppointment else {
+                        self.delegate?.didEncounterError(errorMessage: "Unable to create room for appointment: \(appointment.id)")
+                        return
+                    }
+                    
+                    guard let user = SessionManager.shared.user else {
+                        return
+                    }
+                    
+                    switch appointment.division.videoProvider {
+                    case .zoom, .zoompool:
+                        if updatedAppointment.zoomUrl == nil {
+                            self.delegate?.didEncounterError(errorMessage: "Appointment \(updatedAppointment.id) has its division set to either zoom or zoom pool but does not have a zoom url.")
+                        } else if !user.ownsAppointment(updatedAppointment) || (user.ownsAppointment(updatedAppointment) == true && user.zoomUserId != nil) {
+                            if self.zoomManager.joinZoomCall(
+                                appointment: updatedAppointment,
+                                rootViewController: viewController)
+                            {
+                                SessionManager.shared.apiManager.logVideoSession(for: updatedAppointment.id)
+                                self.joinedAppointment = updatedAppointment
+                            } else {
+                                // No need to report anything to bugsnag here since the zoom manager will report to
+                                // bugsnag for us.
+                                self.delegate?.didEncounterError(errorMessage: "something_went_wrong".localized())
+                            }
+                        } else {
+                            self.delegate?.didEncounterError(errorMessage: "Appointment \(updatedAppointment.id) failed pre-condition checks. It is possible that the provider does not have a zoomUserId attached to their user object.")
+                        }
+                    case .vidyo, .hunter:
+                        self.delegate?.didEncounterError(errorMessage: "Division \(updatedAppointment.divisionId) is using vidyo or hunter which the SDK does not support")
+                    default:
+                        self.delegate?.didEncounterError(errorMessage: "Division \(updatedAppointment.divisionId) has an unrecognizable video provider.")
                     }
                 }
             }
-            
-            return
         }
     }
     
     // MARK: Private
     
-    private func fetchUser(complete: @escaping () -> Void) {
-        SessionManager.shared.fetchCurrentUser { _ in
-            DispatchQueue.main.async {
-                complete()
-            }
+    private let zoomManager = ZoomManager()
+    
+    private func connectedName(for user: UserModel, in appointment: AppointmentModel) -> String {
+        if user.ownsAppointment(appointment) {
+            return appointment.providerName
+        } else {
+            return appointment.getParticipantName(for: user.email) ?? ""
         }
     }
 }

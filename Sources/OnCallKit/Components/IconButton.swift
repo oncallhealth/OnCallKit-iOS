@@ -1,12 +1,12 @@
 //
 //  IconButton.swift
-//  OnCallKit
+//  OnCall Health iOS
 //
-//  Created by Domenic Bianchi on 2021-01-21.
-//  Copyright © 2021 OnCall Health. All rights reserved.
+//  Created by Domenic Bianchi on 2020-05-06.
+//  Copyright © 2020 OnCall Health. All rights reserved.
 //
 
-//import EasyNotificationBadge
+import EasyNotificationBadge
 import SnapKit
 import UIKit
 
@@ -30,7 +30,7 @@ class IconButton: UIButton {
         addTarget(self, action: #selector(didTapAction), for: .touchUpInside)
         
         snp.makeConstraints {
-            $0.width.height.equalTo(size.rawValue).priority(.high)
+            $0.width.height.equalTo(size.rawValue).priority(.required)
         }
     }
     
@@ -39,6 +39,27 @@ class IconButton: UIButton {
     }
     
     // MARK: Internal
+    
+    var badgeNumber: Int? = nil {
+        didSet {
+            guard let badgeNumber = badgeNumber, badgeNumber != 0 else {
+                UIView.performWithoutAnimation {
+                    badge(text: nil)
+                }
+                
+                return
+            }
+            
+            var badgeAppearance = BadgeAppearance()
+            badgeAppearance.font = .systemFont(ofSize: 10)
+            badgeAppearance.distanceFromCenterX = -2
+            badgeAppearance.distanceFromCenterY = -8
+            
+            UIView.performWithoutAnimation {
+                badge(text: String(badgeNumber), appearance: badgeAppearance)
+            }
+        }
+    }
     
     func setContent(icon: UIImage?, isEnabled: Bool = true, badgeNumber: Int? = nil) {
         setImage(icon, for: .normal)
@@ -53,26 +74,6 @@ class IconButton: UIButton {
     // MARK: Private
     
     private var didTap: (() -> Void)? = nil
-    private var badgeNumber: Int? = nil {
-        didSet {
-//            guard let badgeNumber = badgeNumber, badgeNumber != 0 else {
-//                UIView.performWithoutAnimation {
-//                    badge(text: nil)
-//                }
-//
-//                return
-//            }
-//
-//            var badgeAppearance = BadgeAppearance()
-//            badgeAppearance.font = .systemFont(ofSize: 10)
-//            badgeAppearance.distanceFromCenterX = 8
-//            badgeAppearance.distanceFromCenterY = -2
-//
-//            UIView.performWithoutAnimation {
-//                badge(text: String(badgeNumber), appearance: badgeAppearance)
-//            }
-        }
-    }
     
     @objc private func didTapAction() {
         didTap?()

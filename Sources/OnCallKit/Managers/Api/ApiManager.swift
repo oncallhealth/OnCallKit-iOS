@@ -1,27 +1,47 @@
 import Foundation
 import Alamofire
-import Bugsnag
 import PromiseKit
+
+// MARK: - ApiError
+
+enum ApiError: Error {
+    case invalidData(message: String?)
+    case responseError(message: String?)
+    
+    // MARK: Internal
+    
+    var errorMessage: String {
+        switch self {
+        case .invalidData(let message):
+            return message ?? "something_went_wrong".localized()
+        case .responseError(let message):
+            return message ?? "something_went_wrong".localized()
+        }
+    }
+}
+
+// MARK: - Network Error
 
 enum NetworkError: Error {
     case standardError(code: Int, json: Data?)
 }
 
+// MARK: - ApiManager
+
 typealias JSON = [String: Any]
 typealias ApiResponse = (code: Int, body: Data)
 typealias CancellablePromise = (promise: Promise<ApiResponse>, cancel: CancelPromiseClosure)
-public typealias CancelPromiseClosure = () -> Void
+typealias CancelPromiseClosure = () -> Void
+typealias OCResult<T> = Swift.Result<T, ApiError>
 
-public class ApiManager {
+class ApiManager {
     private var basePath: String {
-        return "\(WhitelabelHelper.shared.domain)/api"
+        return "https://\(SessionManager.shared.domain)/api"
     }
     
     private var ssoPath: String {
-        return "\(WhitelabelHelper.shared.domain)/sso"
+        return "https://\(SessionManager.shared.domain)/sso"
     }
-    
-    public var token: String?
     
     static let ssoRedirectUri = "oncallmobile://sso/login"
     static let ssoCallbackURLScheme = "oncallmobile"
@@ -30,54 +50,19 @@ public class ApiManager {
 
 // MARK: - User
 extension ApiManager {
-    func login(username: String,
-               password: String,
-               complete: @escaping (Int, JSON?) -> Void) {
-        let endpoint = "\(basePath)/api-token-auth/"
-        let data = [
-            "username": username,
-            "password": password
-        ]
-        
+    func validateTwoFactorCode(_ code: String, completion: @escaping (OCResult<Void>) -> Void) {
         firstly {
-            post(endpoint: endpoint, body: data, headers: [:]).promise
-        }.done {
-            complete(
-                $0.code,
-                try? JSONSerialization.jsonObject(with: $0.body, options: []) as? JSON)
-        }.catch { error in
-            if let error = error as? NetworkError, case let .standardError(code, _) = error {
-                complete(code, nil)
-            } else {
-                complete(0, nil)
-            }
+            post(endpoint: "\(basePath)/second-factor/", body: ["otp": code]).promise
+        }.done { _ in
+            completion(.success(()))
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            completion(.failure(.responseError(message: nil)))
         }
     }
     
-    func logout() {
-        token = nil
-    }
-    
-    func forgotPassword(email: String, complete: @escaping (Bool) -> Void) {
-        // Due to backend limitations, we need to request the password reset email through both CA and US servers.
-        sendForgotPassword(email: email, basePath: basePath) { caSucccess in
-            self.sendForgotPasswordEmailForUS(email: email) { usSuccess in
-                // If at least one API request worked, don't show an error to the user since if the user receives one
-                // email yet the app displays a "something went wrong" error, it would just cause confusion.
-                complete(caSucccess || usSuccess)
-            }
-        }
-    }
-    
-    func getUser(allProviders: Bool, complete: @escaping ([UserModel]?) -> Void) {
-        let params: JSON
-        if allProviders {
-            params = ["clinic_providers": "true"]
-        } else {
-            params = ["self": "true"]
-        }
-        
-        performFetchUserRequest(params: params) { users in
+    func getProviders(complete: @escaping ([UserModel]?) -> Void) {
+        performFetchUserRequest(params: ["clinic_providers": "true"]) { users in
             complete(users)
         }
     }
@@ -93,37 +78,14 @@ extension ApiManager {
             patch(endpoint: "\(basePath)/oncallusers/\(user.id)", body: ["stripe_creditcard_token": token]).promise
         }.done { _ in
             complete(true)
-        }.catch {
-            Bugsnag.reportApiError($0)
-            complete(false)
-        }
-    }
-    
-    func getOrganizationHasProducts(complete: @escaping ((Bool) -> Void)) {
-        guard let organizationId = WhitelabelHelper.shared.organizationId else {
-            complete(false)
-            return
-        }
-        
-        firstly {
-            get(endpoint: "\(basePath)/products", parameters: ["organization": organizationId]).promise
-        }.done {
-            let json = try? JSONSerialization.jsonObject(with: $0.body, options: []) as? JSON
-            
-            guard let unwrappedJson = json, let result = unwrappedJson["results"] as? [JSON] else {
-                complete(false)
-                return
-            }
-            
-            complete(result.count > 0)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(false)
         }
     }
     
     func getSessionFromToken(complete: @escaping (([HTTPCookie]?) -> Void)) {
-        guard let token = token, let loginEndpoint = URL(string: "\(basePath)/login") else {
+        guard let token = SessionManager.shared.token, let loginEndpoint = URL(string: "\(basePath)/login") else {
             complete(nil)
             return
         }
@@ -138,8 +100,8 @@ extension ApiManager {
             post(endpoint: loginEndpoint.absoluteString, body: ["token": token]).promise
         }.done { _ in
             complete(self.deleteCookies(for: loginEndpoint))
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             self.deleteCookies(for: loginEndpoint)
             complete(nil)
         }
@@ -167,31 +129,9 @@ extension ApiManager {
             try OCJSONDecoder().decode(UserModelResults.self, from: $0.body)
         }.done {
             complete($0.results)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(nil)
-        }
-    }
-    
-    private func sendForgotPassword(email: String, basePath: String, complete: @escaping (Bool) -> Void) {
-        firstly {
-            post(endpoint: "\(basePath)/request_reset_password_email/", body: ["email": email]).promise
-        }.done { _ in
-            complete(true)
-        }.catch {
-            Bugsnag.reportApiError($0)
-            complete(false)
-        }
-    }
-    
-    private func sendForgotPasswordEmailForUS(email: String, complete: @escaping (Bool) -> Void) {
-        guard let usDomain = WhitelabelHelper.shared.domain(for: .US) else {
-            complete(false)
-            return
-        }
-        
-        self.sendForgotPassword(email: email, basePath: usDomain + "/api") {
-            complete($0)
         }
     }
 }
@@ -199,7 +139,8 @@ extension ApiManager {
 // MARK: - Appointments
 extension ApiManager {
     
-    public func getAppointments(
+    func getAppointments(
+        user: UserModel,
         upcoming: Bool,
         search: String?,
         page: Int,
@@ -227,8 +168,8 @@ extension ApiManager {
             try OCJSONDecoder().decode(AppointmentPageModel.self, from: $0.body)
         }.done {
             complete($0)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(nil)
         }
         
@@ -242,8 +183,8 @@ extension ApiManager {
             try OCJSONDecoder().decode(AppointmentModel.self, from: $0.body)
         }.done {
             complete($0)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(nil)
         }
     }
@@ -260,8 +201,8 @@ extension ApiManager {
             patch(endpoint: "\(basePath)/appointmentrequest/\(appointment.id)", body: body).promise
         }.done { _ in
             complete(true)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(false)
         }
     }
@@ -272,14 +213,14 @@ extension ApiManager {
             patch(endpoint: "\(basePath)/appointmentrequest/\(appointment.id)", body: ["status": "denied"]).promise
         }.done { _ in
             complete(true)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(false)
         }
     }
     
     func getPendingAppointments(complete: @escaping ([PendingAppointmentModel]?) -> Void) -> CancelPromiseClosure {
-
+        
         let request = get(endpoint: "\(basePath)/appointmentrequest/?status=pending")
         
         firstly {
@@ -288,8 +229,8 @@ extension ApiManager {
             try OCJSONDecoder().decode([PendingAppointmentModel].self, from: $0.body)
         }.done {
             complete($0)
-        }.catch { error in
-            Bugsnag.reportApiError(error)
+        }.catch { _ in
+            //Bugsnag.reportApiError(error)
             complete(nil)
         }
         
@@ -306,8 +247,8 @@ extension ApiManager {
             patch(endpoint: "\(basePath)/appointmentparticipants/\(participantId)/", body: ["cancelled": "true"]).promise
         }.done { _ in
             complete(true)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(false)
         }
     }
@@ -322,51 +263,51 @@ extension ApiManager {
             post(endpoint: "\(basePath)/appointment_cancellations/", body: ["appointment": url]).promise
         }.done { _ in
             complete(true)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(false)
         }
     }
     
-    func createAppointment(_ appointment: AppointmentCreationModel,
-                           complete: @escaping (_ success: Bool, _ error: String?) -> Void) {
+    func createAppointment(_ appointment: AppointmentCreationModel, completion: @escaping (OCResult<Void>) -> Void) {
         let data: Data
         let json: JSON?
+        
         do {
             data = try OCJSONEncoder().encode(appointment)
             json = try JSONSerialization.jsonObject(with: data, options: []) as? JSON
         } catch {
-            Bugsnag.notifyError(error)
-            complete(false, nil)
+            //Bugsnag.notifyError(error)
+            completion(.failure(.invalidData(message: nil)))
             return
         }
         
         guard let unwrappedJson = json else {
-            complete(false, nil)
+            completion(.failure(.invalidData(message: nil)))
             return
         }
         
         firstly {
             post(endpoint: "\(basePath)/appointments/", body: unwrappedJson).promise
         }.done { _ in
-            complete(true, nil)
+            completion(.success(()))
         }.catch { error in
-            Bugsnag.reportApiError(error)
+            //Bugsnag.reportApiError(error)
             
             if let error = error as? NetworkError,
-                case let .standardError(_, jsonData) = error,
-                let unwrappedJsonData = jsonData,
-                let jsonError = try? OCJSONDecoder().decode(JSONError.self, from: unwrappedJsonData),
-                let message = jsonError.error
+               case let .standardError(_, jsonData) = error,
+               let unwrappedJsonData = jsonData,
+               let jsonError = try? OCJSONDecoder().decode(JSONError.self, from: unwrappedJsonData),
+               let message = jsonError.error
             {
-                complete(false, message)
+                completion(.failure(.responseError(message: message)))
             } else {
-                complete(false, "something_went_wrong".localized())
+                completion(.failure(.responseError(message: nil)))
             }
         }
     }
     
-    func updateAppointment(appointment: AppointmentModel, complete: @escaping ((Bool, String?) -> Void)) {
+    func updateAppointment(appointment: AppointmentModel, completion: @escaping (OCResult<Void>) -> Void) {
         do {
             let appointmentData = try OCJSONEncoder().encode(appointment)
             let appointmentJSON = try JSONSerialization.jsonObject(with: appointmentData, options: []) as? JSON
@@ -374,24 +315,24 @@ extension ApiManager {
             firstly {
                 put(endpoint: "\(basePath)/appointments/\(appointment.id)/", body: appointmentJSON).promise
             }.done { _ in
-                complete(true, nil)
+                completion(.success(()))
             }.catch {
-                Bugsnag.reportApiError($0)
+                //Bugsnag.reportApiError($0)
                 
                 if let error = $0 as? NetworkError,
-                    case let .standardError(_, jsonData) = error,
-                    let unwrappedJsonData = jsonData,
-                    let jsonError = try? OCJSONDecoder().decode([String].self, from: unwrappedJsonData),
-                    let message = jsonError.first
+                   case let .standardError(_, jsonData) = error,
+                   let unwrappedJsonData = jsonData,
+                   let jsonError = try? OCJSONDecoder().decode([String].self, from: unwrappedJsonData),
+                   let message = jsonError.first
                 {
-                    complete(false, message)
+                    completion(.failure(.responseError(message: message)))
                 } else {
-                    complete(false, "something_went_wrong".localized())
+                    completion(.failure(.responseError(message: nil)))
                 }
             }
         } catch {
-            Bugsnag.notifyError(error)
-            complete(false, nil)
+            //Bugsnag.notifyError(error)
+            completion(.failure(.invalidData(message: nil)))
         }
     }
     
@@ -402,36 +343,36 @@ extension ApiManager {
                 body: [
                     "appointment_id": appointment.id,
                     "notes": ""
-            ]).promise
+                ]).promise
         }.done { _ in
             complete()
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete()
         }
     }
     
     func completeAppointment(
-        appointment: AppointmentModel,
+        appointmentId: Int,
         patientNotes: String,
-        complete: @escaping ((Bool, String?) -> Void))
+        completion: @escaping (OCResult<Void>) -> Void)
     {
         firstly {
             post(
                 endpoint: "\(basePath)/appointmentprovidersummarys/",
                 body: [
-                    "appointment_id": appointment.id,
+                    "appointment_id": appointmentId,
                     "notes": patientNotes
-            ]).promise
+                ]).promise
         }.done { _ in
-            complete(true, nil)
-        }.catch {
-            Bugsnag.reportApiError($0)
-            complete(false, "something_went_wrong".localized())
+            completion(.success(()))
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            completion(.failure(.responseError(message: nil)))
         }
     }
     
-    func chargeAppointment(appointmentCharge: AppointmentCharge, complete: @escaping ((Bool) -> Void)) {
+    func chargeAppointment(appointmentCharge: AppointmentCharge, completion: @escaping (OCResult<Bool>) -> Void) {
         do {
             let appointmentChargeData = try OCJSONEncoder().encode(appointmentCharge)
             let appointmentChargeJSON = try JSONSerialization.jsonObject(with: appointmentChargeData, options: []) as? JSON
@@ -441,14 +382,14 @@ extension ApiManager {
             }.map {
                 try OCJSONDecoder().decode(AppointmentChargeResult.self, from: $0.body)
             }.done {
-                complete($0.amountFailed == 0)
-            }.catch {
-                Bugsnag.reportApiError($0)
-                complete(false)
+                completion(.success($0.amountFailed == 0))
+            }.catch { _ in
+                //Bugsnag.reportApiError($0)
+                completion(.failure(.responseError(message: nil)))
             }
         } catch {
-            Bugsnag.notifyError(error)
-            complete(false)
+            //Bugsnag.notifyError(error)
+            completion(.failure(.invalidData(message: nil)))
         }
     }
     
@@ -467,18 +408,18 @@ extension ApiManager {
                 try OCJSONDecoder().decode(AppointmentChargeStatusModel.self, from: $0.body)
             }.done {
                 complete($0.status == .charged)
-            }.catch {
-                Bugsnag.reportApiError($0)
+            }.catch { _ in
+                //Bugsnag.reportApiError($0)
                 complete(false)
             }
         } catch {
-            Bugsnag.notifyError(error)
+            //Bugsnag.notifyError(error)
             complete(false)
         }
     }
     
     func downloadInvoice(url: URL, completion: @escaping (URL?) -> Void) {
-        guard let token = self.token else {
+        guard let token = SessionManager.shared.token else {
             completion(nil)
             return
         }
@@ -503,20 +444,20 @@ extension ApiManager {
                 return (
                     FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent(fileName),
                     [.removePreviousFile, .createIntermediateDirectories])
-        }).response { downloadResponse in
-            completion(downloadResponse.fileURL)
-        }
+            }).response { downloadResponse in
+                completion(downloadResponse.fileURL)
+            }
     }
     
-    func joinHunterAppointment(_ id: Int, complete: @escaping (AppointmentModel?) -> Void) {
+    func joinVideoAppointment(_ id: Int, complete: @escaping (AppointmentModel?) -> Void) {
         firstly {
             get(endpoint: "\(basePath)/appointments/\(id)/join").promise
         }.map {
             try OCJSONDecoder().decode(AppointmentModel.self, from: $0.body)
         }.done {
             complete($0)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(nil)
         }
     }
@@ -531,12 +472,12 @@ extension ApiManager {
         complete: @escaping ((Bool, MessagingResultPage?) -> Void)) -> CancelPromiseClosure
     {
         let request = get(
-            endpoint: "\(WhitelabelHelper.shared.domain)/messaging/api/threads/",
+            endpoint: "https://\(SessionManager.shared.domain)/messaging/api/v1/threads/",
             parameters: [
                 "page": page,
                 "appointment_type": "message",
                 "completed": completed ? "True" : "False"
-        ])
+            ])
         
         firstly {
             request.promise
@@ -544,34 +485,53 @@ extension ApiManager {
             try OCJSONDecoder().decode(MessagingResultPage.self, from: $0.body)
         }.done {
             complete(true, $0)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(false, nil)
         }
         
         return request.cancel
     }
     
-    func fetchThreadMessages(threadId: Int, complete: @escaping ((MessagingThread?) -> Void)) {
+    func fetchThread(threadId: Int, complete: @escaping ((MessagingThread?) -> Void)) {
         firstly {
-            get(endpoint: "\(WhitelabelHelper.shared.domain)/messaging/api/threads/\(threadId)", parameters: [:]).promise
+            get(endpoint: "https://\(SessionManager.shared.domain)/messaging/api/v2/threads/\(threadId)", parameters: [:]).promise
         }.map {
             try OCJSONDecoder().decode(MessagingThread.self, from: $0.body)
         }.done {
             complete($0)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(nil)
+        }
+    }
+    
+    func fetchMessagesInThread(threadId: Int, page: Int?, complete: @escaping ((MessagingMessageResultPage?) -> Void)) {
+        var params: JSON = [:]
+
+        if let page = page {
+            params["page"] = page
+        }
+
+        firstly {
+            get(endpoint: "https://\(SessionManager.shared.domain)/messaging/api/v2/threads/\(threadId)/messages", parameters: params).promise
+        }.map {
+            try OCJSONDecoder().decode(MessagingMessageResultPage.self, from: $0.body)
+        }.done {
+            complete($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(nil)
         }
     }
     
     func updateThreadAnnouncement(threadId: Int, announcementText: String, complete: @escaping ((Bool, String?) -> Void)) {
         firstly {
-            patch(endpoint: "\(WhitelabelHelper.shared.domain)/messaging/api/threads/\(threadId)", body: ["announcement": announcementText]).promise
+            patch(endpoint: "https://\(SessionManager.shared.domain)/messaging/api/threads/\(threadId)", body: ["announcement": announcementText]).promise
         }.done { _ in
             complete(true, nil)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(false, "something_went_wrong".localized())
         }
     }
@@ -579,437 +539,321 @@ extension ApiManager {
     func sendMessage(thread: MessagingThread, message: String, complete: @escaping ((MessagingMessage?) -> Void)) {
         firstly {
             post(
-                endpoint: "\(WhitelabelHelper.shared.domain)/messaging/api/threads/\(thread.id)/messages/",
+                endpoint: "https://\(SessionManager.shared.domain)/messaging/api/threads/\(thread.id)/messages/",
                 body: ["text": message]).promise
         }.map {
             try OCJSONDecoder().decode(MessagingMessage.self, from: $0.body)
         }.done {
             complete($0)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(nil)
         }
     }
 }
 
-
-//// MARK: - Roster
-//extension ApiManager {
-//    func fetchContacts(search: String? = nil, page: Int? = nil, _ complete: @escaping ((RosterContactPage?) -> Void)) {
-//        let endpoint = "\(basePath)/contacts"
-//        var params: JSON = [:]
-//        
-//        if let page = page {
-//            params["page"] = page
-//        }
-//        
-//        if let search = search {
-//            params["query"] = search
-//        }
-//        
-//        firstly {
-//            get(endpoint: endpoint, parameters: params).promise
-//        }.map {
-//            try OCJSONDecoder().decode(RosterContactPage.self, from: $0.body)
-//        }.done {
-//            complete($0)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(nil)
-//        }
-//    }
-//    
-//    func fetchContactDetails(contactId: Int, _ complete: @escaping ((RosterContactDetails?) -> Void)) {
-//        firstly {
-//            get(endpoint: "\(basePath)/contactdetail/\(contactId)/", parameters: nil).promise
-//        }.map {
-//            try OCJSONDecoder().decode(RosterContactDetails.self, from: $0.body)
-//        }.done {
-//            var details = $0
-//            
-//            details.appointmentsFormsAttachments.contactAppointments.sort {
-//                self.sortByDescendingDate(firstDate: $0.date, secondDate: $1.date)
-//            }
-//            
-//            details.appointmentsFormsAttachments.contactAppointmentForms.sort {
-//                self.sortByDescendingDate(firstDate: $0.createdAt, secondDate: $1.createdAt)
-//            }
-//            
-//            details.appointmentsFormsAttachments.contactAppointmentAttachments.sort {
-//                self.sortByDescendingDate(firstDate: $0.createdAt, secondDate: $1.createdAt)
-//            }
-//            
-//            complete(details)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(nil)
-//        }
-//    }
-//    
-//    func saveContact(_ contact: RosterContactModel, complete: @escaping ((RosterContactModel?, [String]?) -> Void)) {
-//        do {
-//            let data = try OCJSONEncoder().encode(contact)
-//            let json = try JSONSerialization.jsonObject(with: data, options: []) as? JSON
-//            
-//            firstly {
-//                put(endpoint: "\(basePath)/contacts/\(contact.id)/", body: json).promise
-//            }.map {
-//                try OCJSONDecoder().decode(RosterContactModel.self, from: $0.body)
-//            }.done {
-//                complete($0, nil)
-//            }.catch {
-//                Bugsnag.reportApiError($0)
-//                if let error = $0 as? NetworkError,
-//                    case let .standardError(_, jsonData) = error,
-//                    let unwrappedJsonData = jsonData,
-//                    let rawJson = try? JSONSerialization.jsonObject(with: unwrappedJsonData, options: []) as? JSON
-//                {
-//                    complete(nil, Array(rawJson.keys))
-//                } else {
-//                    complete(nil, nil)
-//                }
-//            }
-//        } catch {
-//            Bugsnag.notifyError(error)
-//            complete(nil, nil)
-//        }
-//    }
-//    
-//    func deleteContact(_ id: Int, complete: @escaping ((Bool) -> Void)) {
-//        firstly {
-//            delete(endpoint: "\(basePath)/contacts/\(id)/", body: nil).promise
-//        }.done { _ in
-//            complete(true)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(false)
-//        }
-//    }
-//    
-//    func newContact(provider: UserModel,
-//                    name: String,
-//                    email: String,
-//                    phone: String,
-//                    complete: @escaping ((RosterContactModel?, [String]?) -> Void)) {
-//        
-//        let body: JSON = [
-//            "division_id": provider.memberships.first?.division.id ?? 0,
-//            "email": email,
-//            "name": name,
-//            "phone": phone,
-//            "provider": provider.id
-//        ]
-//        
-//        firstly {
-//            post(endpoint: "\(basePath)/contacts/", body: body).promise
-//        }.done {
-//            if $0.code < 200 || $0.code >= 400,
-//               let rawJson = try? JSONSerialization.jsonObject(with: $0.body, options: []) as? JSON 
-//            {
-//                complete(nil, Array(rawJson.keys))
-//                return
-//            }
-//            
-//            let contact = try OCJSONDecoder().decode(RosterContactModel.self, from: $0.body)
-//            complete(contact, nil)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(nil, nil)
-//        }
-//    }
-//}
-
 // MARK: - Attachment
-//extension ApiManager {
-//    func getDownloadAttachmentLink(attachmentId: Int, complete: @escaping ((URL?) -> Void)) {
-//        firstly {
-//            get(endpoint: "\(WhitelabelHelper.shared.domain)/download_appointment_attachment/\(attachmentId)/").promise
-//        }.map {
-//            try OCJSONDecoder().decode(DownloadableAttachmentModel.self, from: $0.body)
-//        }.done {
-//            complete($0.url)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(nil)
-//        }
-//    }
-//    
-//    func getDownloadContactAttachmentLink(attachmentId: Int, complete: @escaping ((URL?) -> Void)) {
-//        firstly {
-//            get(endpoint: "\(WhitelabelHelper.shared.domain)/download_contact_attachment/\(attachmentId)/").promise
-//        }.map {
-//            try OCJSONDecoder().decode(DownloadableAttachmentModel.self, from: $0.body)
-//        }.done {
-//            complete($0.url)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(nil)
-//        }
-//    }
-//    
-//    func getAttachmentDetails(forAppointment: Bool, _ complete: @escaping ((AttachmentUploadData?) -> Void)) {
-//        var params: JSON = [:]
-//        
-//        if !forAppointment {
-//            params["attachment_type"] = "attachment"
-//        }
-//        
-//        firstly {
-//            get(endpoint: "\(WhitelabelHelper.shared.domain)/get_attachment_upload_data/", parameters: params).promise
-//        }.map {
-//            try OCJSONDecoder().decode(AttachmentUploadData.self, from: $0.body)
-//        }.done {
-//            complete($0)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(nil)
-//        }
-//    }
-//    
-//    func uploadFileS3(filename: String, data: AttachmentUploadData, file: Data, complete: @escaping (Bool) -> Void) {
-//        AF.upload(
-//            multipartFormData: { formdata in
-//                formdata.append(filename.data(using: .utf8)!, withName: "key")
-//                formdata.append(ApiKeys.s3.data(using: .utf8)!, withName: "AWSAccessKeyId")
-//                formdata.append("private".data(using: .utf8)!, withName: "acl")
-//                formdata.append("/".data(using: .utf8)!, withName: "success_action_redirect")
-//                formdata.append(data.policy.data(using: .utf8)!, withName: "policy")
-//                formdata.append(data.signature.data(using: .utf8)!, withName: "signature")
-//                formdata.append(file, withName: "file")
-//        },
-//            to: data.bucket).response { response in
-//                if let error = response.error {
-//                    Bugsnag.notifyError(error)
-//                    complete(false)
-//                } else {
-//                    complete(true)
-//                }
-//        }
-//    }
-//    
-//    func attachToAppointment(
-//        appointmentUrl: String,
-//        filename: String,
-//        displayname: String,
-//        participants: [Int],
-//        complete: @escaping ((Bool) -> Void))
-//    {
-//        firstly {
-//            post(endpoint: "\(basePath)/appointmentattachments/",
-//                body: [
-//                    "appointment": appointmentUrl,
-//                    "display_name": displayname,
-//                    "file_key": filename,
-//                    "participants": participants
-//            ]).promise
-//        }.done { _ in
-//            complete(true)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(false)
-//        }
-//    }
-//    
-//    func attachToContact(
-//        contactUrl: String,
-//        filename: String,
-//        displayName: String,
-//        complete: @escaping ((Bool) -> Void))
-//    {
-//        firstly {
-//            post(endpoint: "\(basePath)/contactattachments/",
-//                body: [
-//                    "contact": contactUrl,
-//                    "display_name": displayName,
-//                    "file_key": filename
-//            ]).promise
-//        }.done { _ in
-//            complete(true)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(false)
-//        }
-//    }
-//    
-//    func getPatientAttachments(page: Int, complete: @escaping ((AttachmentPage?) -> Void)) {
-//        firstly {
-//            get(endpoint: "\(basePath)/readonlyuseruploadedfiles/", parameters: ["ordering": "-created_at", "page": page]).promise
-//        }.map {
-//            try OCJSONDecoder().decode(AttachmentPage.self, from: $0.body)
-//        }.done {
-//            complete($0)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(nil)
-//        }
-//    }
-//    
-//    func getAttachments(for appointmentId: Int, complete: @escaping ((AttachmentPage?) -> Void)) {
-//        firstly {
-//            get(endpoint: "\(basePath)/appointmentattachments/", parameters: ["appointment_id": appointmentId]).promise
-//        }.map {
-//            try OCJSONDecoder().decode(AttachmentPage.self, from: $0.body)
-//        }.done {
-//            complete($0)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(nil)
-//        }
-//    }
-//    
-//    func deleteAttachment(id: Int, complete: @escaping (Bool) -> Void) {
-//        firstly {
-//            delete(endpoint: "\(basePath)/appointmentattachments/\(id)/", body: nil).promise
-//        }.done { _ in
-//            complete(true)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(false)
-//        }
-//    }
-//    
-//    func updateAttachmentVisibility(id: Int, visible: [Int], hidden: [Int], complete: @escaping (Bool) -> Void) {
-//        firstly {
-//            patch(
-//                endpoint: "\(basePath)/appointmentattachments/\(id)/",
-//                body: ["participants": visible]).promise
-//        }.then { _ in
-//            self.patch(
-//                endpoint: "\(self.basePath)/appointmentattachments/\(id)/",
-//                body: ["hidden_to_participants": hidden]).promise
-//        }.done { _ in
-//            complete(true)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(false)
-//        }
-//    }
-//}
+extension ApiManager {
+    func getDownloadAttachmentLink(attachmentId: Int, complete: @escaping ((OCResult<URL>) -> Void)) {
+        firstly {
+            get(endpoint: "https://\(SessionManager.shared.domain)/download_appointment_attachment/\(attachmentId)/").promise
+        }.map {
+            try OCJSONDecoder().decode(DownloadableAttachmentModel.self, from: $0.body)
+        }.done {
+            complete(.success($0.url))
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(.failure(.responseError(message: nil)))
+        }
+    }
+    
+    func getDownloadContactAttachmentLink(attachmentId: Int, complete: @escaping ((OCResult<URL>) -> Void)) {
+        firstly {
+            get(endpoint: "https://\(SessionManager.shared.domain)/download_contact_attachment/\(attachmentId)/").promise
+        }.map {
+            try OCJSONDecoder().decode(DownloadableAttachmentModel.self, from: $0.body)
+        }.done {
+            complete(.success($0.url))
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(.failure(.responseError(message: nil)))
+        }
+    }
+    
+    func getAttachmentDetails(forAppointment: Bool, _ complete: @escaping ((AttachmentUploadData?) -> Void)) {
+        var params: JSON = [:]
+        
+        if !forAppointment {
+            params["attachment_type"] = "attachment"
+        }
+        
+        firstly {
+            get(endpoint: "https://\(SessionManager.shared.domain)/get_attachment_upload_data/", parameters: params).promise
+        }.map {
+            try OCJSONDecoder().decode(AttachmentUploadData.self, from: $0.body)
+        }.done {
+            complete($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(nil)
+        }
+    }
+    
+    func uploadFileS3(filename: String, data: AttachmentUploadData, file: Data, complete: @escaping (Bool) -> Void) {
+        AF.upload(
+            multipartFormData: { formdata in
+                formdata.append(filename.data(using: .utf8)!, withName: "key")
+                formdata.append(ApiKeys.s3.data(using: .utf8)!, withName: "AWSAccessKeyId")
+                formdata.append("private".data(using: .utf8)!, withName: "acl")
+                formdata.append("/".data(using: .utf8)!, withName: "success_action_redirect")
+                formdata.append(data.policy.data(using: .utf8)!, withName: "policy")
+                formdata.append(data.signature.data(using: .utf8)!, withName: "signature")
+                formdata.append(file, withName: "file")
+            },
+            to: data.bucket).response { response in
+                if let error = response.error {
+                    //Bugsnag.notifyError(error)
+                    complete(false)
+                } else {
+                    complete(true)
+                }
+            }
+    }
+    
+    func attachToAppointment(
+        appointmentUrl: String,
+        filename: String,
+        displayname: String,
+        participants: [Int],
+        complete: @escaping ((Bool) -> Void))
+    {
+        firstly {
+            post(endpoint: "\(basePath)/appointmentattachments/",
+                 body: [
+                    "appointment": appointmentUrl,
+                    "display_name": displayname,
+                    "file_key": filename,
+                    "participants": participants
+                 ]).promise
+        }.done { _ in
+            complete(true)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(false)
+        }
+    }
+    
+    func attachToContact(
+        contactUrl: String,
+        filename: String,
+        displayName: String,
+        complete: @escaping ((Bool) -> Void))
+    {
+        firstly {
+            post(endpoint: "\(basePath)/contactattachments/",
+                 body: [
+                    "contact": contactUrl,
+                    "display_name": displayName,
+                    "file_key": filename
+                 ]).promise
+        }.done { _ in
+            complete(true)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(false)
+        }
+    }
+    
+    func getPatientAttachments(page: Int, complete: @escaping ((AttachmentPage?) -> Void)) {
+        firstly {
+            get(endpoint: "\(basePath)/readonlyuseruploadedfiles/", parameters: ["ordering": "-created_at", "page": page]).promise
+        }.map {
+            try OCJSONDecoder().decode(AttachmentPage.self, from: $0.body)
+        }.done {
+            complete($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(nil)
+        }
+    }
+    
+    func getAttachments(for appointmentId: Int, complete: @escaping ((AttachmentPage?) -> Void)) {
+        firstly {
+            get(endpoint: "\(basePath)/appointmentattachments/", parameters: ["appointment_id": appointmentId]).promise
+        }.map {
+            try OCJSONDecoder().decode(AttachmentPage.self, from: $0.body)
+        }.done {
+            complete($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(nil)
+        }
+    }
+    
+    func deleteAttachment(id: Int, complete: @escaping (Bool) -> Void) {
+        firstly {
+            delete(endpoint: "\(basePath)/appointmentattachments/\(id)/", body: nil).promise
+        }.done { _ in
+            complete(true)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(false)
+        }
+    }
+    
+    func deleteContactAttachment(id: Int, complete: @escaping (Bool) -> Void) {
+        firstly {
+            patch(endpoint: "\(basePath)/contactattachments/\(id)/", body: ["is_deleted": true]).promise
+        }.done { _ in
+            complete(true)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(false)
+        }
+    }
+    
+    func updateAttachmentVisibility(id: Int, visible: [Int], hidden: [Int], complete: @escaping (Bool) -> Void) {
+        firstly {
+            patch(
+                endpoint: "\(basePath)/appointmentattachments/\(id)/",
+                body: ["participants": visible]).promise
+        }.then { _ in
+            self.patch(
+                endpoint: "\(self.basePath)/appointmentattachments/\(id)/",
+                body: ["hidden_to_participants": hidden]).promise
+        }.done { _ in
+            complete(true)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(false)
+        }
+    }
+}
 
-//// MARK: - Forms
-//
-//extension ApiManager {
-//
-//    func getAllForms(complete: @escaping ((FormPage?) -> Void)) {
-//        firstly {
-//            get(endpoint: "\(basePath)/patientforms/").promise
-//        }.map {
-//            try OCJSONDecoder().decode(FormPage.self, from: $0.body)
-//        }.done {
-//            complete($0)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(nil)
-//        }
-//    }
-//
-//    func getAssignedForms(for appointmentId: Int? = nil, completion: @escaping ((FormPage?) -> Void)) {
-//        var parameters: JSON?
-//
-//        if let appointmentId = appointmentId {
-//            parameters = ["appointment": appointmentId]
-//        }
-//
-//        firstly {
-//            get(endpoint: "\(basePath)/patientformassignments/", parameters: parameters).promise
-//        }.map {
-//            try OCJSONDecoder().decode(FormPage.self, from: $0.body)
-//        }.done {
-//            completion($0)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            completion(nil)
-//        }
-//    }
-//
-//    func getPatientAssignedForms(page: Int, completion: @escaping ((FormPage?) -> Void)) {
-//        firstly {
-//            get(endpoint: "\(basePath)/readonlypatientformassignments/", parameters: ["ordering": "is_completed", "page": page]).promise
-//        }.map {
-//            try OCJSONDecoder().decode(FormPage.self, from: $0.body)
-//        }.done {
-//            completion($0)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            completion(nil)
-//        }
-//    }
-//
-//    func getIntakeForms(for requestId: Int? = nil, completion: @escaping ((FormPage?) -> Void)) {
-//        var parameters: JSON?
-//
-//        if let requestId = requestId {
-//            parameters = ["request": requestId]
-//        }
-//
-//        firstly {
-//            get(endpoint: "\(basePath)/patientformassignments/", parameters: parameters).promise
-//        }.map {
-//            try OCJSONDecoder().decode(FormPage.self, from: $0.body)
-//        }.done {
-//            completion($0)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            completion(nil)
-//        }
-//    }
-//
-//    func assignForm(to participant: AssignFormToParticipantsViewModel.User, formUrl: String, complete: @escaping (Bool) -> Void) {
-//        firstly {
-//            post(
-//                endpoint: "\(basePath)/patientformassignments/",
-//                body: [
-//                    "participant": participant.url,
-//                    "form": formUrl
-//            ]).promise
-//        }.done { _ in
-//            complete(true)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(false)
-//        }
-//    }
-//
-//    func assignForm(to rosterContact: RosterContactModel, formUrl: String, complete: @escaping (Bool) -> Void) {
-//        firstly {
-//            post(
-//                endpoint: "\(basePath)/patientformassignments/",
-//                body: [
-//                    "contact": rosterContact.url,
-//                    "form": formUrl
-//            ]).promise
-//        }.done { _ in
-//            complete(true)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(false)
-//        }
-//    }
-//
-//    func unassignForm(id: Int, complete: @escaping (Bool) -> Void) {
-//        firstly {
-//            patch(
-//                endpoint: "\(basePath)/patientformassignments/\(id)/",
-//                body: ["is_deleted": true]).promise
-//        }.done { _ in
-//            complete(true)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(false)
-//        }
-//    }
-//
-//    func deleteForm(id: Int, complete: @escaping (Bool) -> Void) {
-//        firstly {
-//            delete(endpoint: "\(basePath)/patientforms/\(id)/", body: nil).promise
-//        }.done { _ in
-//            complete(true)
-//        }.catch {
-//            Bugsnag.reportApiError($0)
-//            complete(false)
-//        }
-//    }
-//}
+// MARK: - Forms
+
+extension ApiManager {
+    
+    func getAllForms(complete: @escaping ((FormPage?) -> Void)) {
+        firstly {
+            get(endpoint: "\(basePath)/patientforms/").promise
+        }.map {
+            try OCJSONDecoder().decode(FormPage.self, from: $0.body)
+        }.done {
+            complete($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(nil)
+        }
+    }
+    
+    func getAssignedForms(for appointmentId: Int? = nil, completion: @escaping ((FormPage?) -> Void)) {
+        var parameters: JSON?
+        
+        if let appointmentId = appointmentId {
+            parameters = ["appointment": appointmentId]
+        }
+        
+        firstly {
+            get(endpoint: "\(basePath)/patientformassignments/", parameters: parameters).promise
+        }.map {
+            try OCJSONDecoder().decode(FormPage.self, from: $0.body)
+        }.done {
+            completion($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            completion(nil)
+        }
+    }
+    
+    func getPatientAssignedForms(page: Int, completion: @escaping ((FormPage?) -> Void)) {
+        firstly {
+            get(endpoint: "\(basePath)/readonlypatientformassignments/", parameters: ["ordering": "is_completed", "page": page]).promise
+        }.map {
+            try OCJSONDecoder().decode(FormPage.self, from: $0.body)
+        }.done {
+            completion($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            completion(nil)
+        }
+    }
+    
+    func getIntakeForms(for requestId: Int? = nil, completion: @escaping ((FormPage?) -> Void)) {
+        var parameters: JSON?
+        
+        if let requestId = requestId {
+            parameters = ["request": requestId]
+        }
+        
+        firstly {
+            get(endpoint: "\(basePath)/patientformassignments/", parameters: parameters).promise
+        }.map {
+            try OCJSONDecoder().decode(FormPage.self, from: $0.body)
+        }.done {
+            completion($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            completion(nil)
+        }
+    }
+    
+    func assignForm(to participant: AssignFormToParticipantsViewModel.User, formUrl: String, complete: @escaping (Bool) -> Void) {
+        firstly {
+            post(
+                endpoint: "\(basePath)/patientformassignments/",
+                body: [
+                    "participant": participant.url,
+                    "form": formUrl
+                ]).promise
+        }.done { _ in
+            complete(true)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(false)
+        }
+    }
+
+    func assignForm(to rosterContact: RosterContactModel, formUrl: String, complete: @escaping (Bool) -> Void) {
+        firstly {
+            post(
+                endpoint: "\(basePath)/patientformassignments/",
+                body: [
+                    "contact": rosterContact.url,
+                    "form": formUrl
+                ]).promise
+        }.done { _ in
+            complete(true)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(false)
+        }
+    }
+    
+    func unassignForm(id: Int, complete: @escaping (Bool) -> Void) {
+        firstly {
+            patch(
+                endpoint: "\(basePath)/patientformassignments/\(id)/",
+                body: ["is_deleted": true]).promise
+        }.done { _ in
+            complete(true)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(false)
+        }
+    }
+    
+    func deleteForm(id: Int, complete: @escaping (Bool) -> Void) {
+        firstly {
+            delete(endpoint: "\(basePath)/patientforms/\(id)/", body: nil).promise
+        }.done { _ in
+            complete(true)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
+            complete(false)
+        }
+    }
+}
 
 // MARK: - Notifications
 
@@ -1025,8 +869,8 @@ extension ApiManager {
                 ]).promise
         }.done { _ in
             complete(true)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(false)
         }
     }
@@ -1042,8 +886,8 @@ extension ApiManager {
             try OCJSONDecoder().decode(SSOLoginModel.self, from: $0.body)
         }.done {
             complete($0)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(nil)
         }
     }
@@ -1065,8 +909,8 @@ extension ApiManager {
             try OCJSONDecoder().decode(SSOLoginTokenModel.self, from: $0.body)
         }.done {
             complete($0.token)
-        }.catch {
-            Bugsnag.reportApiError($0)
+        }.catch { _ in
+            //Bugsnag.reportApiError($0)
             complete(nil)
         }
     }
@@ -1084,6 +928,7 @@ extension ApiManager {
 }
 
 // MARK: - Helpers
+
 extension ApiManager {
     
     private func request(endpoint: String, method: HTTPMethod, body: JSON?) -> CancellablePromise {
@@ -1100,7 +945,7 @@ extension ApiManager {
         
         if inputheaders == nil {
             headers = [:]
-            if let token = self.token {
+            if let token = SessionManager.shared.token {
                 headers["Authorization"] = "Token \(token)"
                 headers["X-Authorization"] = "Token \(token)"
             }

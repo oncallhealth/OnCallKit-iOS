@@ -1,9 +1,9 @@
 //
 //  LoadingOverlayViewController.swift
-//  OnCallKit
+//  OnCall Health iOS
 //
-//  Created by Domenic Bianchi on 2021-01-21.
-//  Copyright © 2021 OnCall Health. All rights reserved.
+//  Created by Domenic Bianchi on 2020-09-28.
+//  Copyright © 2020 OnCall Health. All rights reserved.
 //
 
 import SnapKit

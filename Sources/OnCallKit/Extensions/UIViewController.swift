@@ -1,5 +1,3 @@
-import MobileCoreServices
-import SwiftEntryKit
 import UIKit
 
 // MARK: - UIViewController
@@ -8,7 +6,7 @@ extension UIViewController {
     
     // MARK: Internal
     
-    var topViewController: UIViewController {
+    var topViewController: UIViewController? {
         var top = UIApplication.shared.delegate?.window??.rootViewController
         
         while true {
@@ -23,7 +21,7 @@ extension UIViewController {
             }
         }
         
-        return top ?? UIViewController()
+        return top
     }
     
     func presentAlert(title: String, body: String) {
@@ -34,49 +32,20 @@ extension UIViewController {
         self.present(alert, animated: true, completion: nil)
     }
     
-    func presentSnackbar(_ type: SnackbarType = .error(message: "something_went_wrong".localized())) {
-        var attributes = EKAttributes.bottomToast
-        let title: String
-        
-        switch type {
-        case .error(let message):
-            attributes.entryBackground = .color(color: EKColor(.snackbarError))
-            attributes.hapticFeedbackType = .error
-            title = message
-        case .success(let message):
-            attributes.entryBackground = .color(color: EKColor(.snackbarSuccess))
-            attributes.hapticFeedbackType = .success
-            title = message
-        }
-        
-        let simpleMessage = EKSimpleMessage(
-            title: EKProperty.LabelContent(text: title, style: .init(font: .systemFont(ofSize: 16), color: .white)),
-            description: .init(text: "", style: .init(font: .systemFont(ofSize: 1), color: .clear)))
-        let notificationMessage = EKNotificationMessage(simpleMessage: simpleMessage)
-        let contentView = EKNotificationMessageView(with: notificationMessage)
-        SwiftEntryKit.display(entry: contentView, using: attributes)
+    func presentSnackbar(_ type: Snackbar.SnackbarType = .error(message: "something_went_wrong".localized()), completion: (() -> Void)? = nil) {
+        UIViewController.currentSnackbar?.dismiss()
+        UIViewController.currentSnackbar = Snackbar(type: type)
+        UIViewController.currentSnackbar?.present(completion: completion)
     }
-    
-//    func confirm(title: String,
-//                 body: String,
-//                 negativeTitle: String,
-//                 negativeAction: @escaping (() -> Void),
-//                 positiveTitle: String,
-//                 positiveAction: @escaping (() -> Void)) {
-//        
-//        let confirmController = ConfirmController(title: title,
-//                                                  message: body,
-//                                                  negativeTitle: negativeTitle,
-//                                                  negativeAction: negativeAction,
-//                                                  positiveTitle: positiveTitle,
-//                                                  positiveAction: positiveAction)
-//        
-//        self.present(confirmController.alert, animated: true, completion: nil)
-//    }
     
     func presentLoadingIndicator() -> LoadingOverlayViewController {
         let viewController = LoadingOverlayViewController()
         viewController.present(on: self)
         return viewController
     }
+    
+    // MARK: Private
+    
+    static private var currentSnackbar: Snackbar? = nil
+    
 }

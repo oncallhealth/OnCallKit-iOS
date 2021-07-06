@@ -6,6 +6,11 @@ struct MessagingResultPage: Codable {
     var results: [MessagingThread]
 }
 
+struct MessagingMessageResultPage: Codable {
+    var count: Int
+    var results: [MessagingMessage]
+}
+
 struct MessagingAppointment: OnCallAppointment, Codable {
     
     // MARK: CodingKeys
@@ -129,7 +134,7 @@ class MessagingMessage: Codable, MessageType {
         if let unwrappedAttachment = attachment {
             self.kind = .custom(unwrappedAttachment)
         } else {
-            self.kind = .text(text)
+            self.kind = .text(text.htmlDecoded)
         }
     }
     

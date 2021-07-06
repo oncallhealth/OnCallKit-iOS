@@ -65,8 +65,7 @@ final class ApiRequest {
                     return
                 }
                 
-                if responseCode == 403 && method == .get && SessionManager.shared.tokenInKeychain() {
-                    SessionManager.shared.clearTokenFromKeychain()
+                if responseCode == 403 && method == .get {
                     NotificationCenter.default.post(name: Notification.Name.did403, object: nil)
                     self.completion?(.error(code: 403, jsonData: nil))
                     return

@@ -11,12 +11,12 @@
         }
       },
       {
-        "package": "Bugsnag",
-        "repositoryURL": "https://github.com/bugsnag/bugsnag-cocoa",
+        "package": "EasyNotificationBadge",
+        "repositoryURL": "https://github.com/Minitour/EasyNotificationBadge",
         "state": {
           "branch": null,
-          "revision": "04e6ab85d3aa9dd7495d8b1bfd10bb6241a13dea",
-          "version": "6.8.3"
+          "revision": "2774998af193a396b1842c0727fe52c2bd217ae2",
+          "version": "1.2.5"
         }
       },
       {
@@ -29,12 +29,30 @@
         }
       },
       {
-        "package": "KeychainSwift",
-        "repositoryURL": "https://github.com/evgenyneu/keychain-swift",
+        "package": "Material Components iOS",
+        "repositoryURL": "https://github.com/DomenicBianchi01/material-components-ios",
         "state": {
           "branch": null,
-          "revision": "96fb84f45a96630e7583903bd7e08cf095c7a7ef",
-          "version": "19.0.0"
+          "revision": "0814da3ee382e12f470138085cf9a7283a04f63c",
+          "version": "110.0.0"
+        }
+      },
+      {
+        "package": "MDFInternationalization",
+        "repositoryURL": "https://github.com/grupopulpo/material-internationalization-ios",
+        "state": {
+          "branch": null,
+          "revision": "92fa95fcb868b1599f6c8fc03ef30c21b47c66e7",
+          "version": "2.0.97"
+        }
+      },
+      {
+        "package": "MDFTextAccessibility",
+        "repositoryURL": "https://github.com/grupopulpo/material-text-accessibility-ios",
+        "state": {
+          "branch": null,
+          "revision": "1a1aeb5d6f13e41d1f6a18f32a2131df23f7c198",
+          "version": "2.0.2"
         }
       },
       {
@@ -60,17 +78,8 @@
         "repositoryURL": "https://github.com/mxcl/PromiseKit",
         "state": {
           "branch": null,
-          "revision": "f6b15b7626a4399864ffa1d5ec2ed9cf0cea5556",
-          "version": "6.13.2"
-        }
-      },
-      {
-        "package": "QuickLayout",
-        "repositoryURL": "https://github.com/huri000/QuickLayout",
-        "state": {
-          "branch": null,
-          "revision": "6be62decbe508d8fc8f9dbafc349d05bab03c38b",
-          "version": "3.0.1"
+          "revision": "d2f7ba14bcdc45e18f4f60ad9df883fb9055f081",
+          "version": "6.15.3"
         }
       },
       {
@@ -89,15 +98,6 @@
           "branch": null,
           "revision": "df8d82047f6654d8e4b655d1b1525c64e1059d21",
           "version": "4.0.4"
-        }
-      },
-      {
-        "package": "SwiftEntryKit",
-        "repositoryURL": "https://github.com/huri000/SwiftEntryKit",
-        "state": {
-          "branch": null,
-          "revision": "c2d42574e4fe4e1f9719843f35add7922942a16b",
-          "version": "1.2.7"
         }
       }
     ]

@@ -16,26 +16,26 @@ struct AttachmentPage: Codable {
 struct Attachment: Codable {
     let id: Int
     let displayName: String
-    let createdAt: Date
+    let createdAt: Date?
     let fileExtension: String
     let isHidden: Bool
     let isEditable: Bool
     let accessibleTo: [Int]
-    let appointmentTitle: String?
+    let appointment: String?
     
     private enum CodingKeys: String, CodingKey {
-        case id, displayName, createdAt, fileExtension, isHidden, isEditable, accessibleTo, appointmentTitle
+        case id, displayName, createdAt, fileExtension, isHidden, isEditable, accessibleTo, appointment
     }
     
     init(
         id: Int,
         displayName: String,
-        createdAt: Date,
+        createdAt: Date?,
         fileExtension: String,
         isHidden: Bool?,
         isEditable: Bool,
         accessibleTo: [Int]?,
-        appointmentTitle: String?)
+        appointment: String?)
     {
         self.id = id
         self.displayName = displayName
@@ -44,7 +44,7 @@ struct Attachment: Codable {
         self.isHidden = isHidden ?? false
         self.isEditable = isEditable
         self.accessibleTo = accessibleTo ?? []
-        self.appointmentTitle = appointmentTitle
+        self.appointment = appointment
     }
     
     init(from decoder: Decoder) throws {
@@ -53,6 +53,18 @@ struct Attachment: Codable {
         
         guard let date = Date(fromString: dateString) else {
             throw DecodingError.typeMismatch(Date.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Date string not valid"))
+        }
+        
+        // Depending on the API endpoint called, sometimes the `appointment` field can be Int or a String. Therfore,
+        // lets always store the value as a String just to keep things a little bit more consistent
+        
+        let appointmentString = try? container.decodeIfPresent(String.self, forKey: .appointment)
+        let appointmentInt: String?
+        
+        if let appointment = try? container.decodeIfPresent(Int.self, forKey: .appointment) {
+            appointmentInt = String(appointment)
+        } else {
+            appointmentInt = nil
         }
 
         self.init(
@@ -63,6 +75,6 @@ struct Attachment: Codable {
             isHidden: try container.decodeIfPresent(Bool.self, forKey: .isHidden),
             isEditable: try container.decode(Bool.self, forKey: .isEditable),
             accessibleTo: try container.decodeIfPresent([Int].self, forKey: .accessibleTo),
-            appointmentTitle: try container.decodeIfPresent(String.self, forKey: .appointmentTitle))
+            appointment: appointmentString ?? appointmentInt)
     }
 }

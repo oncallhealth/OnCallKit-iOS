@@ -29,11 +29,11 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
         
         super.init(nibName: nil, bundle: nil)
         
-//        NotificationCenter.default.addObserver(
-//            self,
-//            selector: #selector(didReceiveMessage(_:)),
-//            name: Notification.Name.didReceiveWebsocketMessage,
-//            object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(didReceiveMessage(_:)),
+            name: Notification.Name.didReceiveWebsocketMessage,
+            object: nil)
         
         inputBar.sendButton.configure {
             configureAttachmentButton($0)
@@ -42,6 +42,13 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
         configureAppointmentNotice(for: threadStub)
         
         messagesCollectionView = MessagesCollectionView(frame: .zero, collectionViewLayout: MyCustomMessagesFlowLayout())
+        messagesCollectionView.delegate = self
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if scrollView.contentOffset.y == 0 && !refreshControl.isRefreshing {
+            loadNextPage()
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -58,12 +65,18 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
         }
     }
     
+    private lazy var refreshControl: UIRefreshControl = {
+        let control = UIRefreshControl()
+        control.addTarget(self, action: #selector(loadNextPage), for: .valueChanged)
+        return control
+    }()
+    
     override func didMove(toParent parent: UIViewController?) {
         super.didMove(toParent: parent)
         
         parent?.view.addSubview(inputBar)
         keyboardManager.bind(inputAccessoryView: inputBar) { [weak self] in
-            return UIDevice.current.isIpad ? -(self?.topViewController.tabBarController?.tabBar.frame.height ?? 0) : 0
+            return UIDevice.current.isIpad ? -(self?.topViewController?.tabBarController?.tabBar.frame.height ?? 0) : 0
         }
     }
     
@@ -84,6 +97,7 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
         
         inputBar.delegate = self
         inputBar.inputTextView.placeholder = "enter_message".localized()
+        inputBar.inputTextView.accessibilityLabel = "enter_message".localized()
 
         if let layout = messagesCollectionView.collectionViewLayout as? MessagesCollectionViewFlowLayout {
             let outgoingAlignment = LabelAlignment(
@@ -152,6 +166,7 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
     private var appointment: AppointmentModel?
     private var loadedOnce = false
     private var isBeingShown = false
+    private var totalMessages = 0
     
     private let keyboardManager = KeyboardManager()
     private let inputBar = InputBarAccessoryView()
@@ -179,25 +194,64 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
     }
     
     private func loadMessages(firstLoad: Bool = false) {
-        SessionManager.shared.apiManager.fetchThreadMessages(threadId: threadStub.id) {
-            guard let thread = $0 else {
-                return
-            }
-            
-            self.thread = thread
-            
-            if firstLoad {
+        if firstLoad {
+            SessionManager.shared.apiManager.fetchThread(threadId: threadStub.id) {
+                guard let thread = $0 else {
+                    return
+                }
+                
+                self.thread = thread
+                self.fetchFirstPageOfMessages()
+                
                 SessionManager.shared.apiManager.getAppointment(id: thread.appointment.id) {
                     self.appointment = $0
                 }
             }
+        } else {
+            fetchFirstPageOfMessages()
+        }
+    }
+    
+    private func fetchFirstPageOfMessages() {
+        SessionManager.shared.apiManager.fetchMessagesInThread(threadId: threadStub.id, page: 1) {
+            guard let messages = $0, let thread = self.thread else {
+                self.presentSnackbar(.error(message: "something_went_wrong".localized()))
+                return
+            }
+            
+            self.thread?.latestMessages = messages.results.reversed()
+            self.totalMessages = messages.count
             
             DispatchQueue.main.async {
-                //MessageThreadTracker.markThreadAsRead(thread)
+//                MessageThreadTracker.markThreadAsRead(thread)
                 self.messagesCollectionView.reloadData()
                 self.messagesCollectionView.scrollToLastItem(animated: true)
                 self.configureAppointmentNotice(for: thread)
                 self.delegate?.threadUpdated(thread)
+            }
+        }
+    }
+    
+    @objc private func loadNextPage() {
+        guard let thread = thread, thread.latestMessages.count < totalMessages else {
+            return
+        }
+        
+        messagesCollectionView.refreshControl = refreshControl
+        refreshControl.beginRefreshing()
+        messagesCollectionView.setContentOffset(CGPoint(x: 0, y: -refreshControl.frame.height), animated: true)
+        
+        SessionManager.shared.apiManager.fetchMessagesInThread(threadId: thread.id, page: (thread.latestMessages.count/20) + 1) {
+            guard let messages = $0 else {
+                self.presentSnackbar(.error(message: "something_went_wrong".localized()))
+                return
+            }
+            
+            DispatchQueue.main.async {
+                self.thread?.latestMessages.insert(contentsOf: messages.results.reversed(), at: 0)
+                self.messagesCollectionView.reloadDataAndKeepOffset()
+                self.refreshControl.endRefreshing()
+                self.messagesCollectionView.refreshControl = nil
             }
         }
     }
@@ -228,8 +282,10 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
             }
             
             thread.latestMessages.append(message)
+            self.totalMessages += 1
             
             DispatchQueue.main.async {
+                UIAccessibility.post(notification: .announcement, argument: "Message sent")
                 self.messagesCollectionView.reloadData()
                 self.messagesCollectionView.scrollToLastItem(animated: true)
             }
@@ -286,14 +342,17 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
             picker.delegate = self
             self.present(picker, animated: true, completion: nil)
         }, formsAction: {
-//            guard let appointment = self.appointment else {
-//                return
-//            }
+            guard let appointment = self.appointment else {
+                return
+            }
             
-//            let viewController = AssignFormWrapperViewController(
-//                viewModel: AssignFormViewModel(
-//                    state: .appointment(participants: appointment.participants)), source: .messages)
-//            self.present(viewController, animated: true)
+            let viewController = AssignFormWrapperViewController(
+                viewModel: AssignFormViewModel(
+                    state: .appointment(participants: appointment.participants)))
+            
+            viewController.delegate = self
+            
+            self.present(viewController, animated: true)
         })
     }
     
@@ -303,24 +362,24 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
         originalFileName: String,
         completion: @escaping (Bool) -> Void)
     {
-//        guard let thread = thread else {
-//            completion(false)
-//            return
-//        }
+        guard let thread = thread else {
+            completion(false)
+            return
+        }
         
-//        let uploadHelper = AttachmentUploadHelper()
-//        uploadHelper.promptForAttachmentName(viewController: self, name: originalFileName) { name in
-//            self.inputBar.sendButton.startAnimating()
-//            uploadHelper.upload(
-//                mode: .appointment(url: thread.appointment.url, participantIds: thread.appointment.participantIds),
-//                document: data,
-//                displayName: name,
-//                pathExtension: pathExtension,
-//                source: .messages)
-//            { _ in
-//                self.inputBar.sendButton.stopAnimating()
-//            }
-//        }
+        let uploadHelper = AttachmentUploadHelper()
+        uploadHelper.promptForAttachmentName(viewController: self, name: originalFileName) { name in
+            self.inputBar.sendButton.startAnimating()
+            uploadHelper.upload(
+                mode: .appointment(url: thread.appointment.url, participantIds: thread.appointment.participantIds),
+                document: data,
+                displayName: name,
+                pathExtension: pathExtension)
+            { _ in
+                UIAccessibility.post(notification: .announcement, argument: "Attachment sent")
+                self.inputBar.sendButton.stopAnimating()
+            }
+        }
     }
     
     private func configureAttachmentButton(_ item: InputBarButtonItem) {
@@ -328,6 +387,7 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
         item.image = "ic-paperclip".iconTemplate()
         item.imageView?.tintColor = .iconTintColor
         item.isEnabled = isSendButtonEnabled
+        item.accessibilityLabel = "Add attachment"
     }
     
     private func configureSendButton(_ item: InputBarButtonItem) {
@@ -335,6 +395,7 @@ class MessageThreadViewController: MessagesViewController, MessagesLayoutDelegat
         item.title = "send".localized()
         item.image = nil
         item.isEnabled = isSendButtonEnabled
+        item.accessibilityLabel = "Send message"
     }
     
     private func isPreviousMessageSameSender(at indexPath: IndexPath) -> Bool {
@@ -464,28 +525,31 @@ extension MessageThreadViewController: MessagesDisplayDelegate {
 
 extension MessageThreadViewController: MessageCellDelegate {
     func didTapMessage(in cell: MessageCollectionViewCell) {
-//        if let attachmentCell = cell as? MessagingThreadAttachmentCell {
-//            let indicator = presentLoadingIndicator()
-//            SessionManager.shared.apiManager.getDownloadAttachmentLink(
-//                attachmentId: attachmentCell.attachmentId)
-//            { url in
-//                indicator.dismiss {
-//                    guard let url = url else { return }
-//
-//                    if (url.pathExtension.lowercased() == "pdf") {
-//                        self.present(UINavigationController(
-//                                    rootViewController: PDFViewController(
-//                                        url: url,
-//                                        title: "file".localized(),
-//                                        savedMessage: "file_saved".localized(),
-//                                        sentMessage: "file_sent".localized())),
-//                                animated: true)
-//                    } else {
-//                        self.present(SFSafariViewController(url: url), animated: true)
-//                    }
-//                }
-//            }
-//        }
+        if let attachmentCell = cell as? MessagingThreadAttachmentCell {
+            let indicator = presentLoadingIndicator()
+            SessionManager.shared.apiManager.getDownloadAttachmentLink(
+                attachmentId: attachmentCell.attachmentId)
+            { result in
+                indicator.dismiss {
+                    switch result {
+                    case .success(let url):
+                        if url.pathExtension.lowercased() == "pdf" {
+                            self.present(UINavigationController(
+                                        rootViewController: PDFViewController(
+                                            url: url,
+                                            title: "file".localized(),
+                                            savedMessage: "file_saved".localized(),
+                                            sentMessage: "file_sent".localized())),
+                                    animated: true)
+                        } else {
+                            self.present(SFSafariViewController(url: url), animated: true)
+                        }
+                    case .failure:
+                        self.presentSnackbar()
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -570,5 +634,17 @@ extension MessageThreadViewController: UIImagePickerControllerDelegate {
                 self.loadMessages()
             }
         }
+    }
+}
+
+// MARK: - AssignFormWrapperViewControllerDelegate
+
+extension MessageThreadViewController: AssignFormWrapperViewControllerDelegate {
+    func formAssigned() {
+        guard let thread = thread else {
+            return
+        }
+        
+        delegate?.threadUpdated(thread)
     }
 }

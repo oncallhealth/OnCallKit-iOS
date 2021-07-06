@@ -1,9 +1,9 @@
 //
 //  LoadingToast.swift
-//  OnCallKit
+//  Development Simulator
 //
-//  Created by Domenic Bianchi on 2021-01-21.
-//  Copyright © 2021 OnCall Health. All rights reserved.
+//  Created by Domenic Bianchi on 2020-09-28.
+//  Copyright © 2020 OnCall Health. All rights reserved.
 //
 
 import UIKit
@@ -17,14 +17,7 @@ class LoadingToast: UIView {
     init() {
         super.init(frame: .zero)
         
-        let loadingIndicator = UIActivityIndicatorView()
-        
-        if #available(iOS 13.0, *) {
-            loadingIndicator.style = .large
-        } else {
-            loadingIndicator.style = .whiteLarge
-            loadingIndicator.color = .gray
-        }
+        let loadingIndicator = UIActivityIndicatorView(indicatorStyle: .large)
         
         addSubview(loadingIndicator)
         
@@ -38,8 +31,7 @@ class LoadingToast: UIView {
         }
         
         layer.cornerRadius = 10
-        //backgroundColor = .toastBackground
-        backgroundColor = .white
+        backgroundColor = .toastBackground
         
         loadingIndicator.startAnimating()
     }

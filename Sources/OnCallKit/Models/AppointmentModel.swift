@@ -38,6 +38,11 @@ enum AppointmentStatus: String, Codable {
         return self != .incomplete
     }
     
+    /// Use this to check if the appointment was marked as completed but maybe charging participants failed
+    var isPastAppointment: Bool {
+        return isComplete || self == .chargeFailed
+    }
+    
     func localized() -> String {
         switch self {
         case .chargeFailed:
@@ -64,21 +69,22 @@ enum AppointmentStatus: String, Codable {
     }
 }
 
-struct AppointmentDivision: Codable {
+struct AppointmentDivision: Codable, Equatable {
     var id: Int
     var name: String
     var paymentProcessor: String
-    var videoProvider: VideoProvider
+    var videoProvider: VideoProvider?
 }
 
 enum VideoProvider: String, Codable {
     case vidyo
     case zoom
+    case zoompool
     case hunter
 }
 
-public struct AppointmentPageModel: Codable {
-    public var results: [AppointmentModel]
+struct AppointmentPageModel: Codable {
+    var results: [AppointmentModel]
     var next: String?
     var count: Int
 }
@@ -183,7 +189,34 @@ struct PendingAppointmentRequesterModel: Codable {
     let dateOfBirth: String?
 }
 
-public struct AppointmentModel: OnCallAppointment, Codable {
+// MARK: - AppointmentModel
+
+public struct AppointmentModel: OnCallAppointment, Codable, Equatable {
+    
+    // MARK: JoinableState
+    
+    enum JoinableState: Encodable, Equatable {
+        
+        // MARK: Lifecycle
+        
+        init(from decoder: Decoder) throws {
+            throw DecodingError.typeMismatch(
+                JoinableState.self,
+                DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Decoding not supported"))
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            throw EncodingError.invalidValue(
+                JoinableState.self,
+                EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Encoding not supported"))
+        }
+        
+        // MARK: Internal
+        
+        case complete
+        case joinNow
+        case joinIn(timeUntil: String?)
+    }
     
     // MARK: CodingKeys
     
@@ -214,6 +247,7 @@ public struct AppointmentModel: OnCallAppointment, Codable {
         case fee
         case status
         case hunterRoom
+        case recurrenceId
     }
     
     // MARK: Lifecycle
@@ -244,7 +278,8 @@ public struct AppointmentModel: OnCallAppointment, Codable {
         messageThreadId: Int?,
         fee: Float,
         status: AppointmentStatus,
-        hunterRoom: HunterRoom?)
+        hunterRoom: HunterRoom?,
+        recurrenceId: Int?)
     {
         self.id = id
         self.appointmentType = appointmentType
@@ -273,6 +308,7 @@ public struct AppointmentModel: OnCallAppointment, Codable {
         self.fee = fee
         self.status = status
         self.hunterRoom = hunterRoom
+        self.recurrenceId = recurrenceId
     }
     
     public init(from decoder: Decoder) throws {
@@ -311,8 +347,11 @@ public struct AppointmentModel: OnCallAppointment, Codable {
             messageThreadId: try container.decodeIfPresent(Int.self, forKey: .messageThreadId),
             fee: try container.decode(Float.self, forKey: .fee),
             status: try container.decode(AppointmentStatus.self, forKey: .status),
-            hunterRoom: try container.decodeIfPresent(HunterRoom.self, forKey: .hunterRoom))
+            hunterRoom: try container.decodeIfPresent(HunterRoom.self, forKey: .hunterRoom),
+            recurrenceId: try container.decodeIfPresent(Int.self, forKey: .recurrenceId))
     }
+    
+    // MARK: Internal
     
     var appointmentType: AppointmentType
     var completed: Bool
@@ -341,6 +380,33 @@ public struct AppointmentModel: OnCallAppointment, Codable {
     var fee: Float
     var status: AppointmentStatus
     let hunterRoom: HunterRoom?
+    let recurrenceId: Int?
+    
+    var joinableState: JoinableState? {
+        let joinInterval: TimeInterval = 10 * 60 // 10 minutes
+        let startTime = date ?? Date()
+        let endTime = startTime.addingTimeInterval(TimeInterval(duration * 60))
+        let joinTime = startTime.addingTimeInterval(-joinInterval)
+        let isUpcoming = completed == false && cancellation == nil
+        
+        // If session can now be joined
+        if Date() >= joinTime {
+            if endTime < Date() {
+                return .complete
+            } else if appointmentType == .video {
+                return .joinNow
+            } else {
+                return .complete
+            }
+        } else {
+            // Join time is in the future
+            if isUpcoming && appointmentType == .video {
+                return .joinIn(timeUntil: joinTime.timeUntil())
+            }
+        }
+        
+        return nil
+    }
     
     func getParticipantName(for email: String) -> String? {
         return allParticipants.first { $0.email == email }?.name
@@ -356,6 +422,54 @@ struct AppointmentCreationModel: Codable {
     let title: String
     let participants: [AppointmentParticipantCreationModel]
     let provider: String
+}
+
+// MARK: - AppointmentReccurrenceCreationModel
+
+struct AppointmentReccurrenceCreationModel: Codable {
+    
+    // MARK: CodingKeys
+    
+    private enum CodingKeys: String, CodingKey {
+        case appointment
+        case dateTimeList = "datetime_list"
+    }
+    
+    // MARK: Internal
+    
+    let appointment: AppointmentCreationModel
+    let dateTimeList: [String]
+    
+}
+
+// MARK: - AppointmentRecurrencesModel
+
+struct AppointmentRecurrencesModel: Codable {
+    
+    // MARK: Internal
+    
+    let id: Int
+    let appointments: [AppointmentModel]
+    
+}
+
+// MARK: - AppointmentRecurrenceCancellationModel
+
+struct AppointmentRecurrenceCancellationModel: Encodable {
+    
+    // MARK: Operation
+    
+    enum Operation: String, Encodable {
+        case all = "ALL"
+        case following = "FOLLOWING"
+    }
+    
+    // MARK: Internal
+    
+    let recurrenceId: Int
+    let operation: Operation
+    let contextAppointmentId: Int?
+
 }
 
 enum AppointmentChargeType: String, Codable {
@@ -389,7 +503,7 @@ struct ParticipantAppointmentCharge: Codable {
     let participant: String
 }
 
-struct HunterRoom: Codable {
+struct HunterRoom: Codable, Equatable {
     let pin: String
     let key: String
 }
