@@ -1,6 +1,6 @@
 import UIKit
 
-extension String {
+public extension String {
     func localized() -> String {
         return NSLocalizedString(self, comment: "")
     }
@@ -9,7 +9,7 @@ extension String {
         return String.localizedStringWithFormat(localized(), value)
     }
     
-    func icon() -> UIImage? {
+    public func icon() -> UIImage? {
         return UIImage(named: self, in: Bundle.module, compatibleWith: nil)
     }
     
